@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Workplace - Setup Journal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+        }
+
+        .btn-secondary {
+            background: rgba(100, 200, 255, 0.15);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(100, 200, 255, 0.25);
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #e8e8e8;
+        }
+
+        .stat-card .stat-value.success {
+            color: #10b981;
+        }
+
+        .stat-card .stat-value.warning {
+            color: #f59e0b;
+        }
+
+        .stat-card .stat-sub {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+
+        /* Filter Section */
+        .filters-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .filters-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 0.6rem;
+            background: #1a1a2e;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-size: 0.85rem;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Journal Table */
+        .journal-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .journal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .journal-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #34d399;
+        }
+
+        .journal-count {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .journal-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .journal-table th {
+            text-align: left;
+            padding: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .journal-table td {
+            padding: 0.75rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .journal-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .symbol-cell {
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .direction-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .direction-badge.long {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .direction-badge.short {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .direction-badge.neutral {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+
+        .score-value {
+            font-weight: 600;
+        }
+
+        .score-value.high {
+            color: #10b981;
+        }
+
+        .score-value.medium {
+            color: #f59e0b;
+        }
+
+        .score-value.low {
+            color: #ef4444;
+        }
+
+        .eval-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .eval-badge.correct {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .eval-badge.incorrect {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .eval-badge.pending {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+        }
+
+        .timestamp {
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: #e8e8e8;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-info {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #94a3b8;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(16, 185, 129, 0.2);
+            border-top-color: #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            color: #475569;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .filters-row {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .journal-table {
+                font-size: 0.8rem;
+            }
+
+            .journal-table th,
+            .journal-table td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-left">
+                <a href="workplace.html" class="back-link">&larr; Workplace</a>
+            </div>
+            <h1>Setup Journal</h1>
+            <div class="header-right">
+                <button class="btn btn-secondary" onclick="triggerEvaluation()">Evaluation starten</button>
+                <a href="config-workplace.html" class="btn btn-secondary">Config</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Aufgezeichnete Setups</div>
+                <div class="stat-value" id="totalPredictions">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Ausgewertet</div>
+                <div class="stat-value" id="evaluatedCount">-</div>
+                <div class="stat-sub" id="evaluatedPercent"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Korrekt</div>
+                <div class="stat-value success" id="correctCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Trefferquote</div>
+                <div class="stat-value" id="accuracyPercent">-</div>
+                <div class="stat-sub" id="avgConfidence"></div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-card">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label>Symbol</label>
+                    <select id="filterSymbol">
+                        <option value="">Alle Symbole</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Timeframe</label>
+                    <select id="filterTimeframe">
+                        <option value="">Alle</option>
+                        <option value="M1">M1</option>
+                        <option value="M5">M5</option>
+                        <option value="M15">M15</option>
+                        <option value="M30">M30</option>
+                        <option value="H1">H1</option>
+                        <option value="H4">H4</option>
+                        <option value="D1">D1</option>
+                        <option value="W1">W1</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Richtung</label>
+                    <select id="filterDirection">
+                        <option value="">Alle</option>
+                        <option value="long">Long</option>
+                        <option value="short">Short</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Status</label>
+                    <select id="filterEvaluated">
+                        <option value="">Alle</option>
+                        <option value="evaluated">Ausgewertet</option>
+                        <option value="pending">Ausstehend</option>
+                        <option value="correct">Korrekt</option>
+                        <option value="incorrect">Falsch</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary" onclick="applyFilters()">Filtern</button>
+                    <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal Table -->
+        <div class="journal-card">
+            <div class="journal-header">
+                <h2>Trading Setups</h2>
+                <span class="journal-count" id="journalCount">Lade...</span>
+            </div>
+
+            <div id="journalContent">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Lade Setups...</p>
+                </div>
+            </div>
+
+            <div class="pagination" id="pagination" style="display: none;">
+                <button onclick="prevPage()" id="prevBtn">&larr; Zurück</button>
+                <span class="page-info" id="pageInfo">Seite 1</span>
+                <button onclick="nextPage()" id="nextBtn">Weiter &rarr;</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DATA_SERVICE_URL = '/data';
+        const WORKPLACE_URL = '/workplace';
+        const PAGE_SIZE = 25;
+
+        let currentPage = 0;
+        let totalItems = 0;
+        let symbols = [];
+
+        async function init() {
+            await Promise.all([
+                loadStats(),
+                loadSymbols(),
+                loadPredictions()
+            ]);
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${WORKPLACE_URL}/api/v1/scan/accuracy`);
+                if (!response.ok) throw new Error('Stats nicht verfügbar');
+                const data = await response.json();
+
+                document.getElementById('totalPredictions').textContent = data.total_predictions || 0;
+                document.getElementById('evaluatedCount').textContent = data.evaluated_count || 0;
+                document.getElementById('correctCount').textContent = data.correct_count || 0;
+
+                if (data.total_predictions > 0) {
+                    const evalPercent = ((data.evaluated_count || 0) / data.total_predictions * 100).toFixed(1);
+                    document.getElementById('evaluatedPercent').textContent = `${evalPercent}% ausgewertet`;
+                }
+
+                if (data.accuracy_percent !== null && data.accuracy_percent !== undefined) {
+                    const accEl = document.getElementById('accuracyPercent');
+                    accEl.textContent = data.accuracy_percent.toFixed(1) + '%';
+                    accEl.className = 'stat-value ' + (data.accuracy_percent >= 60 ? 'success' : data.accuracy_percent >= 50 ? 'warning' : '');
+                } else {
+                    document.getElementById('accuracyPercent').textContent = '-';
+                }
+
+                if (data.avg_confidence) {
+                    document.getElementById('avgConfidence').textContent = `Ø Konfidenz: ${(data.avg_confidence * 100).toFixed(0)}%`;
+                }
+
+            } catch (e) {
+                console.error('Fehler beim Laden der Stats:', e);
+            }
+        }
+
+        async function loadSymbols() {
+            try {
+                const response = await fetch(`${DATA_SERVICE_URL}/api/v1/db/coverage`);
+                if (!response.ok) return;
+                const data = await response.json();
+
+                symbols = Object.keys(data.symbols || {}).sort();
+                const select = document.getElementById('filterSymbol');
+
+                symbols.forEach(symbol => {
+                    const opt = document.createElement('option');
+                    opt.value = symbol;
+                    opt.textContent = symbol;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Fehler beim Laden der Symbole:', e);
+            }
+        }
+
+        async function loadPredictions() {
+            const content = document.getElementById('journalContent');
+            content.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Lade Setups...</p></div>`;
+
+            try {
+                const params = new URLSearchParams({
+                    service: 'workplace',
+                    limit: PAGE_SIZE,
+                    offset: currentPage * PAGE_SIZE
+                });
+
+                const symbol = document.getElementById('filterSymbol').value;
+                const timeframe = document.getElementById('filterTimeframe').value;
+                const evaluated = document.getElementById('filterEvaluated').value;
+
+                if (symbol) params.append('symbol', symbol);
+                if (timeframe) params.append('timeframe', timeframe);
+                if (evaluated === 'evaluated' || evaluated === 'correct' || evaluated === 'incorrect') {
+                    params.append('evaluated_only', 'true');
+                }
+
+                const response = await fetch(`${DATA_SERVICE_URL}/api/v1/predictions/?${params}`);
+                if (!response.ok) throw new Error('Predictions nicht verfügbar');
+
+                let predictions = await response.json();
+
+                // Client-side filtering for direction and correct/incorrect
+                const direction = document.getElementById('filterDirection').value;
+                const evalFilter = document.getElementById('filterEvaluated').value;
+
+                if (direction) {
+                    predictions = predictions.filter(p => {
+                        const pred = p.prediction || {};
+                        return pred.direction === direction;
+                    });
+                }
+
+                if (evalFilter === 'correct') {
+                    predictions = predictions.filter(p => p.is_correct === true);
+                } else if (evalFilter === 'incorrect') {
+                    predictions = predictions.filter(p => p.is_correct === false);
+                } else if (evalFilter === 'pending') {
+                    predictions = predictions.filter(p => p.evaluated_at === null);
+                }
+
+                totalItems = predictions.length;
+                renderPredictions(predictions);
+                updatePagination();
+
+            } catch (e) {
+                console.error('Fehler beim Laden der Predictions:', e);
+                content.innerHTML = `<div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <h3>Fehler beim Laden</h3>
+                    <p>${e.message}</p>
+                </div>`;
+            }
+        }
+
+        function renderPredictions(predictions) {
+            const content = document.getElementById('journalContent');
+            const countEl = document.getElementById('journalCount');
+
+            if (!predictions || predictions.length === 0) {
+                content.innerHTML = `<div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <h3>Keine Setups gefunden</h3>
+                    <p>Es wurden noch keine Trading-Setups aufgezeichnet oder die Filter sind zu restriktiv.</p>
+                </div>`;
+                countEl.textContent = '0 Einträge';
+                return;
+            }
+
+            countEl.textContent = `${predictions.length} Einträge`;
+
+            let html = `<table class="journal-table">
+                <thead>
+                    <tr>
+                        <th>Zeitpunkt</th>
+                        <th>Symbol</th>
+                        <th>TF</th>
+                        <th>Richtung</th>
+                        <th>Score</th>
+                        <th>Konfidenz</th>
+                        <th>Ziel-Zeit</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            predictions.forEach(p => {
+                const pred = p.prediction || {};
+                const direction = pred.direction || 'neutral';
+                const score = pred.composite_score || 0;
+                const confidence = p.confidence ? (p.confidence * 100).toFixed(0) : '-';
+
+                const predictedAt = p.predicted_at ? formatDateTime(p.predicted_at) : '-';
+                const targetTime = p.target_time ? formatDateTime(p.target_time) : '-';
+
+                let evalBadge = '<span class="eval-badge pending">Ausstehend</span>';
+                if (p.evaluated_at) {
+                    if (p.is_correct === true) {
+                        evalBadge = '<span class="eval-badge correct">Korrekt</span>';
+                    } else if (p.is_correct === false) {
+                        evalBadge = '<span class="eval-badge incorrect">Falsch</span>';
+                    }
+                }
+
+                const scoreClass = score >= 75 ? 'high' : score >= 50 ? 'medium' : 'low';
+
+                html += `<tr>
+                    <td class="timestamp">${predictedAt}</td>
+                    <td class="symbol-cell">${p.symbol}</td>
+                    <td>${p.timeframe}</td>
+                    <td><span class="direction-badge ${direction}">${direction.toUpperCase()}</span></td>
+                    <td><span class="score-value ${scoreClass}">${score.toFixed(1)}</span></td>
+                    <td>${confidence}%</td>
+                    <td class="timestamp">${targetTime}</td>
+                    <td>${evalBadge}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            content.innerHTML = html;
+        }
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleDateString('de-CH', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            if (totalItems > PAGE_SIZE) {
+                pagination.style.display = 'flex';
+                const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+                pageInfo.textContent = `Seite ${currentPage + 1} von ${totalPages}`;
+                prevBtn.disabled = currentPage === 0;
+                nextBtn.disabled = currentPage >= totalPages - 1;
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                loadPredictions();
+            }
+        }
+
+        function nextPage() {
+            currentPage++;
+            loadPredictions();
+        }
+
+        function applyFilters() {
+            currentPage = 0;
+            loadPredictions();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterSymbol').value = '';
+            document.getElementById('filterTimeframe').value = '';
+            document.getElementById('filterDirection').value = '';
+            document.getElementById('filterEvaluated').value = '';
+            currentPage = 0;
+            loadPredictions();
+        }
+
+        async function triggerEvaluation() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Evaluiere...';
+
+            try {
+                const response = await fetch(`${WORKPLACE_URL}/api/v1/scan/evaluate`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Evaluation fehlgeschlagen');
+                const result = await response.json();
+
+                alert(`Evaluation abgeschlossen:\n${result.evaluated} ausgewertet\n${result.correct} korrekt\n${result.incorrect} falsch`);
+
+                // Refresh data
+                await loadStats();
+                await loadPredictions();
+
+            } catch (e) {
+                alert('Fehler bei Evaluation: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Evaluation starten';
+            }
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
