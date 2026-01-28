@@ -268,10 +268,8 @@ class InferenceService:
             )
 
             gpu_info = _get_gpu_memory_info()
-            logger.info(
-                f"Model loaded: {self._model_version} on {self._device}"
-                f"{f' (GPU mem: {gpu_info.get(\"allocated_mb\", 0)}MB)' if gpu_info else ''}"
-            )
+            gpu_mem_str = f" (GPU mem: {gpu_info.get('allocated_mb', 0)}MB)" if gpu_info else ""
+            logger.info(f"Model loaded: {self._model_version} on {self._device}{gpu_mem_str}")
             return True
 
         except RuntimeError as e:

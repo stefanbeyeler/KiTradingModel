@@ -152,7 +152,7 @@ async def list_predictions(
     timeframe: Optional[str] = Query(default=None, description="Filter nach Timeframe"),
     prediction_type: Optional[str] = Query(default=None, description="Filter nach Typ (price, direction, etc.)"),
     evaluated_only: bool = Query(default=False, description="Nur evaluierte Vorhersagen"),
-    limit: int = Query(default=50, ge=1, le=500, description="Max. Anzahl Einträge"),
+    limit: int = Query(default=50, ge=1, le=2000, description="Max. Anzahl Einträge"),
     offset: int = Query(default=0, ge=0, description="Offset für Paginierung"),
 ):
     """

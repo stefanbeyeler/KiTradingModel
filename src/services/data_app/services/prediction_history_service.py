@@ -549,14 +549,16 @@ class PredictionHistoryService:
         try:
             pool = timescaledb_service._pool
             async with pool.acquire() as conn:
-                # Delete predictions where prediction->entry_price is null or missing
+                # Delete predictions where prediction is null OR entry_price is null/missing
                 result = await conn.execute(
                     """
                     DELETE FROM prediction_history
                     WHERE service = $1
                       AND (
-                          prediction->>'entry_price' IS NULL
+                          prediction IS NULL
+                          OR prediction->>'entry_price' IS NULL
                           OR prediction->>'entry_price' = 'null'
+                          OR prediction->>'entry_price' = ''
                       )
                     """,
                     service,
