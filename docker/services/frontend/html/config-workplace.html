@@ -650,66 +650,6 @@
                     </p>
                 </div>
 
-                <!-- SCANNER SECTION -->
-                <div class="card">
-                    <div class="section-header">
-                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-                        </svg>
-                        <h2>Scanner</h2>
-                    </div>
-
-                    <div class="scanner-status-row" style="margin-bottom: 1rem;">
-                        <div class="scanner-stat">
-                            <span class="scanner-stat-label">Status:</span>
-                            <span class="status-badge" id="scannerStatusBadge">-</span>
-                        </div>
-                        <div class="scanner-stat">
-                            <span class="scanner-stat-label">Gescannt:</span>
-                            <span class="scanner-stat-value" id="scannedSymbols">-</span>
-                        </div>
-                        <div class="scanner-stat">
-                            <span class="scanner-stat-label">Alerts:</span>
-                            <span class="scanner-stat-value" id="alertsCount">-</span>
-                        </div>
-                    </div>
-
-                    <div class="btn-row" style="margin-bottom: 1rem;">
-                        <button class="btn btn-primary btn-sm" onclick="startScanner()">Start</button>
-                        <button class="btn btn-secondary btn-sm" onclick="stopScanner()">Stop</button>
-                        <button class="btn btn-secondary btn-sm" id="manualScanBtn" onclick="triggerManualScan()">Manueller Scan</button>
-                    </div>
-
-                    <!-- Scan Progress -->
-                    <div id="scanProgressContainer" style="display: none; margin-bottom: 1rem;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.8rem;">
-                            <span id="scanProgressText">Scanne...</span>
-                            <span id="scanProgressPercent">0%</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" id="scanProgressBar" style="width: 0%;"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 0.3rem; font-size: 0.75rem; opacity: 0.7;">
-                            <span id="scanCurrentSymbol">-</span>
-                            <span id="scanProgressCount">0 / 0</span>
-                        </div>
-                    </div>
-
-                    <div class="form-row-2">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Intervall (Sek.)</label>
-                            <input type="number" id="scanInterval" value="60" min="10" max="600" />
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Auto-Start</label>
-                            <select id="autoScanEnabled">
-                                <option value="true">Ja</option>
-                                <option value="false">Nein</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- TRADINGVIEW SECTION -->
                 <div class="card">
                     <div class="section-header">
@@ -835,6 +775,66 @@
 
             <!-- Right Column -->
             <div class="config-column">
+                <!-- SCANNER SECTION -->
+                <div class="card">
+                    <div class="section-header">
+                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                        </svg>
+                        <h2>Scanner</h2>
+                    </div>
+
+                    <div class="scanner-status-row" style="margin-bottom: 1rem;">
+                        <div class="scanner-stat">
+                            <span class="scanner-stat-label">Status:</span>
+                            <span class="status-badge" id="scannerStatusBadge">-</span>
+                        </div>
+                        <div class="scanner-stat">
+                            <span class="scanner-stat-label">Gescannt:</span>
+                            <span class="scanner-stat-value" id="scannedSymbols">-</span>
+                        </div>
+                        <div class="scanner-stat">
+                            <span class="scanner-stat-label">Alerts:</span>
+                            <span class="scanner-stat-value" id="alertsCount">-</span>
+                        </div>
+                    </div>
+
+                    <div class="btn-row" style="margin-bottom: 1rem;">
+                        <button class="btn btn-primary btn-sm" onclick="startScanner()">Start</button>
+                        <button class="btn btn-secondary btn-sm" onclick="stopScanner()">Stop</button>
+                        <button class="btn btn-secondary btn-sm" id="manualScanBtn" onclick="triggerManualScan()">Manueller Scan</button>
+                    </div>
+
+                    <!-- Scan Progress -->
+                    <div id="scanProgressContainer" style="display: none; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.8rem;">
+                            <span id="scanProgressText">Scanne...</span>
+                            <span id="scanProgressPercent">0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="scanProgressBar" style="width: 0%;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.3rem; font-size: 0.75rem; opacity: 0.7;">
+                            <span id="scanCurrentSymbol">-</span>
+                            <span id="scanProgressCount">0 / 0</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Intervall (Sek.)</label>
+                            <input type="number" id="scanInterval" value="60" min="10" max="600" />
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Auto-Start</label>
+                            <select id="autoScanEnabled">
+                                <option value="true">Ja</option>
+                                <option value="false">Nein</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- SCORING SECTION -->
                 <div class="card">
                     <div class="section-header">
