@@ -355,6 +355,49 @@
             font-family: 'Consolas', 'Monaco', monospace;
             color: #ffd54f;
         }
+
+        .gpu-badge {
+            background: rgba(118, 185, 0, 0.2);
+            color: #76b900;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .threshold-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .threshold-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .threshold-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.75rem;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .threshold-item .label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .threshold-item .value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #f472b6;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -424,6 +467,14 @@
                     <h4>&#128202; Service Runs History</h4>
                     <p>Detaillierte Historie aller Validierungen, Trainings und Scans über alle Services hinweg.</p>
                 </div>
+                <div class="feature-item">
+                    <h4>&#127919; GPU Monitoring</h4>
+                    <p>Echtzeit-Überwachung von GPU-Speicher, Temperatur und Auslastung via nvidia-ml-py (pynvml).</p>
+                </div>
+                <div class="feature-item">
+                    <h4>&#128293; CUDA Error Detection</h4>
+                    <p>Erkennung von CUDA-Fehlern (illegal memory access, OOM) in GPU-Service Health-Responses.</p>
+                </div>
             </div>
 
             <div class="info-box">
@@ -457,12 +508,12 @@
                         <td><span class="alert-level critical">Critical</span></td>
                     </tr>
                     <tr>
-                        <td>NHITS Service</td>
+                        <td>NHITS Service<span class="gpu-badge">GPU</span></td>
                         <td><code>trading-nhits:3002</code></td>
                         <td><span class="alert-level critical">Critical</span></td>
                     </tr>
                     <tr>
-                        <td>TCN Pattern</td>
+                        <td>TCN Pattern<span class="gpu-badge">GPU</span></td>
                         <td><code>trading-tcn:3003</code></td>
                         <td><span class="alert-level high">High</span></td>
                     </tr>
@@ -472,17 +523,17 @@
                         <td><span class="alert-level high">High</span></td>
                     </tr>
                     <tr>
-                        <td>Embedder</td>
+                        <td>Embedder<span class="gpu-badge">GPU</span></td>
                         <td><code>trading-embedder:3005</code></td>
                         <td><span class="alert-level medium">Medium</span></td>
                     </tr>
                     <tr>
-                        <td>RAG Service</td>
+                        <td>RAG Service<span class="gpu-badge">GPU</span></td>
                         <td><code>trading-rag:3008</code></td>
                         <td><span class="alert-level high">High</span></td>
                     </tr>
                     <tr>
-                        <td>LLM Service</td>
+                        <td>LLM Service<span class="gpu-badge">GPU</span></td>
                         <td><code>trading-llm:3009</code></td>
                         <td><span class="alert-level high">High</span></td>
                     </tr>
@@ -492,7 +543,7 @@
                         <td><span class="alert-level medium">Medium</span></td>
                     </tr>
                     <tr>
-                        <td>CNN-LSTM Service</td>
+                        <td>CNN-LSTM Service<span class="gpu-badge">GPU</span></td>
                         <td><code>trading-cnn-lstm:3007</code></td>
                         <td><span class="alert-level high">High</span></td>
                     </tr>
@@ -508,10 +559,19 @@
                     </tr>
                 </tbody>
             </table>
+
+            <div class="info-box" style="margin-top: 1rem;">
+                <strong><span class="gpu-badge">GPU</span> Services:</strong> Bei GPU-Services werden zusätzlich CUDA-Fehler
+                (illegal memory access, out of memory, device-side assert) in den Health-Responses erkannt.
+                Timeout für GPU-Services: 20 Sekunden (Standard: 10s).
+            </div>
         </div>
 
         <div class="content-card">
             <h2>&#128279; API-Endpunkte (über 60 Endpoints)</h2>
+            <p style="margin-bottom: 1rem; opacity: 0.8; font-size: 0.9rem;">
+                Inkl. Resource Protection für Host-Schutz und GPU-Monitoring.
+            </p>
 
             <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem; color: #f472b6;">Monitoring & Status (7 Endpoints)</h3>
             <div class="endpoint-list">
@@ -666,6 +726,20 @@
                     <span class="method">GET</span>
                     <span class="endpoint-path">/api/v1/training/history</span>
                     <span class="endpoint-desc">Training-Historie</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #f472b6;">Resource Protection &amp; GPU Monitoring (2 Endpoints)</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/resources</span>
+                    <span class="endpoint-desc">CPU, Memory, GPU Status &amp; Schwellenwerte</span>
+                </div>
+                <div class="endpoint">
+                    <span class="method">GET</span>
+                    <span class="endpoint-path">/api/v1/training/can-start</span>
+                    <span class="endpoint-desc">Prüfen ob Training gestartet werden kann</span>
                 </div>
             </div>
 
@@ -845,6 +919,56 @@
                     </tr>
                 </tbody>
             </table>
+
+            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #f472b6;">Resource Protection Schwellenwerte</h3>
+            <p style="margin-bottom: 1rem; opacity: 0.9;">
+                Der Watchdog überwacht System-Ressourcen und blockiert neue Trainings wenn Schwellenwerte überschritten werden:
+            </p>
+
+            <div class="threshold-grid">
+                <div class="threshold-item">
+                    <span class="label">CPU Warning</span>
+                    <span class="value">75%</span>
+                </div>
+                <div class="threshold-item">
+                    <span class="label">CPU Critical</span>
+                    <span class="value">90%</span>
+                </div>
+                <div class="threshold-item">
+                    <span class="label">Memory Warning</span>
+                    <span class="value">80%</span>
+                </div>
+                <div class="threshold-item">
+                    <span class="label">Memory Critical</span>
+                    <span class="value">90%</span>
+                </div>
+            </div>
+
+            <h4 style="margin-top: 1rem; margin-bottom: 0.5rem; color: #76b900;">GPU Schwellenwerte</h4>
+            <div class="threshold-grid">
+                <div class="threshold-item">
+                    <span class="label">GPU Memory Warning</span>
+                    <span class="value">85%</span>
+                </div>
+                <div class="threshold-item">
+                    <span class="label">GPU Memory Critical</span>
+                    <span class="value">95%</span>
+                </div>
+                <div class="threshold-item">
+                    <span class="label">GPU Temp Warning</span>
+                    <span class="value">75°C</span>
+                </div>
+                <div class="threshold-item">
+                    <span class="label">GPU Temp Critical</span>
+                    <span class="value">85°C</span>
+                </div>
+            </div>
+
+            <div class="info-box warning" style="margin-top: 1rem;">
+                <strong>Host Protection:</strong> Bei Überschreitung der Warning-Schwellenwerte werden neue Trainings
+                blockiert. GPU-Monitoring erfolgt via <code>nvidia-ml-py</code> (pynvml) und ist optional -
+                ohne GPU läuft der Service mit CPU-only Monitoring.
+            </div>
         </div>
 
         <div class="content-card">
@@ -857,6 +981,8 @@
                 <span class="tech-tag">uvicorn</span>
                 <span class="tech-tag">Telegram Bot API</span>
                 <span class="tech-tag">asyncio</span>
+                <span class="tech-tag">psutil</span>
+                <span class="tech-tag">nvidia-ml-py</span>
             </div>
         </div>
 
@@ -866,6 +992,7 @@
                 <a href="/watchdog/docs" target="_blank">&#128196; API Dokumentation</a>
                 <a href="/watchdog/health" target="_blank">&#128154; Health Check</a>
                 <a href="/watchdog/api/v1/status" target="_blank">&#128200; System Status</a>
+                <a href="/watchdog/api/v1/training/resources" target="_blank">&#127919; GPU/CPU Ressourcen</a>
                 <a href="/watchdog/api/v1/tests/definitions" target="_blank">&#129514; Test-Definitionen</a>
                 <a href="/watchdog/api/v1/tests/status" target="_blank">&#128202; Test-Status</a>
                 <a href="/" class="back-link">&#127968; Dashboard</a>

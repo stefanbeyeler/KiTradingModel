@@ -1595,14 +1595,18 @@
             document.getElementById('modalTimeframe').textContent = data.timeframe;
 
             const direction = pred.direction || 'neutral';
-            const score = pred.composite_score || 0;
+            const score = Number(pred.composite_score) || 0;
             const confidence = pred.confidence_level || 'low';
-            const alignment = pred.signal_alignment || 'mixed';
-            const signalsAvailable = pred.signals_available || 0;
             const keyDrivers = pred.key_drivers || [];
             const timeframeScores = pred.timeframe_scores || {};
 
+            // Berechne Signalanzahl und Alignment aus signals falls nicht gespeichert
+            const { signalsCount: calcSignalsCount, alignment: calcAlignment } = analyzeSignals(signals, direction);
+            const signalsAvailable = pred.signals_available || calcSignalsCount;
+            const alignment = pred.signal_alignment || calcAlignment;
+
             const scoreClass = score >= 75 ? 'score-high' : score >= 50 ? 'score-med' : 'score-low';
+            const alignmentClass = alignment === 'strong' ? 'score-high' : alignment === 'moderate' ? 'score-med' : '';
 
             let html = '';
 
@@ -1624,8 +1628,26 @@
                         <div class="value">${confidence.toUpperCase()}</div>
                     </div>
                     <div class="overview-item">
+                        <div class="label">Alignment</div>
+                        <div class="value ${alignmentClass}">${alignment.toUpperCase()}</div>
+                    </div>
+                </div>
+                <div class="overview-grid" style="margin-top: 0.75rem;">
+                    <div class="overview-item">
                         <div class="label">Signale</div>
                         <div class="value">${signalsAvailable}/6</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Timeframe</div>
+                        <div class="value">${data.timeframe}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Horizon</div>
+                        <div class="value">${data.horizon || '-'}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Status</div>
+                        <div class="value ${data.is_correct === true ? 'score-high' : data.is_correct === false ? 'score-low' : ''}">${data.evaluated_at ? (data.is_correct ? 'Korrekt' : 'Falsch') : 'Offen'}</div>
                     </div>
                 </div>
             </div>`;
@@ -1676,19 +1698,19 @@
             html += renderSignalCard('NHITS', signals.nhits, (sig) => `
                 <div class="signal-detail">
                     <span class="label">Trend Prob.</span>
-                    <span class="value">${((sig.trend_probability || 0) * 100).toFixed(0)}%</span>
+                    <span class="value">${((Number(sig.trend_probability) || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">Modell-Konf.</span>
-                    <span class="value">${sig.model_confidence ? (sig.model_confidence * 100).toFixed(0) + '%' : '-'}</span>
+                    <span class="value">${sig.model_confidence != null ? (Number(sig.model_confidence) * 100).toFixed(0) + '%' : '-'}</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">Prognose 1h</span>
-                    <span class="value">${sig.forecast_change_1h !== null ? sig.forecast_change_1h.toFixed(2) + '%' : '-'}</span>
+                    <span class="value">${sig.forecast_change_1h != null ? Number(sig.forecast_change_1h).toFixed(2) + '%' : '-'}</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">Prognose 24h</span>
-                    <span class="value">${sig.forecast_change_24h !== null ? sig.forecast_change_24h.toFixed(2) + '%' : '-'}</span>
+                    <span class="value">${sig.forecast_change_24h != null ? Number(sig.forecast_change_24h).toFixed(2) + '%' : '-'}</span>
                 </div>
             `);
 
@@ -1700,11 +1722,11 @@
                 </div>
                 <div class="signal-detail">
                     <span class="label">Wahrsch.</span>
-                    <span class="value">${((sig.regime_probability || 0) * 100).toFixed(0)}%</span>
+                    <span class="value">${((Number(sig.regime_probability) || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">Score</span>
-                    <span class="value">${(sig.signal_score || 0).toFixed(1)}</span>
+                    <span class="value">${(Number(sig.signal_score) || 0).toFixed(1)}</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">Dauer</span>
@@ -1720,7 +1742,7 @@
             html += renderSignalCard('Technisch', signals.technical, (sig) => `
                 <div class="signal-detail">
                     <span class="label">RSI</span>
-                    <span class="value">${sig.rsi !== null ? sig.rsi.toFixed(1) : '-'} (${sig.rsi_signal || '-'})</span>
+                    <span class="value">${sig.rsi != null ? Number(sig.rsi).toFixed(1) : '-'} (${sig.rsi_signal || '-'})</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">MACD</span>
@@ -1732,7 +1754,7 @@
                 </div>
                 <div class="signal-detail">
                     <span class="label">BB Position</span>
-                    <span class="value">${sig.bb_position !== null ? (sig.bb_position * 100).toFixed(0) + '%' : '-'}</span>
+                    <span class="value">${sig.bb_position != null ? (Number(sig.bb_position) * 100).toFixed(0) + '%' : '-'}</span>
                 </div>
             `);
 
@@ -1745,7 +1767,7 @@
                 </div>
                 <div class="signal-detail">
                     <span class="label">Preis-Konf.</span>
-                    <span class="value">${((sig.price_confidence || 0) * 100).toFixed(0)}%</span>
+                    <span class="value">${((Number(sig.price_confidence) || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">Regime</span>
@@ -1753,21 +1775,21 @@
                 </div>
                 <div class="signal-detail">
                     <span class="label">Regime-Prob.</span>
-                    <span class="value">${((sig.regime_probability || 0) * 100).toFixed(0)}%</span>
+                    <span class="value">${((Number(sig.regime_probability) || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">1h Prognose</span>
-                    <span class="value">${sig.forecast_change_1h !== null ? sig.forecast_change_1h.toFixed(2) + '%' : '-'}</span>
+                    <span class="value">${sig.forecast_change_1h != null ? Number(sig.forecast_change_1h).toFixed(2) + '%' : '-'}</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">1d Prognose</span>
-                    <span class="value">${sig.forecast_change_1d !== null ? sig.forecast_change_1d.toFixed(2) + '%' : '-'}</span>
+                    <span class="value">${sig.forecast_change_1d != null ? Number(sig.forecast_change_1d).toFixed(2) + '%' : '-'}</span>
                 </div>`;
 
                 if (sig.patterns && sig.patterns.length > 0) {
                     details += `
                     <div class="signal-patterns">
-                        <div class="label">Patterns (${((sig.pattern_confidence || 0) * 100).toFixed(0)}%)</div>
+                        <div class="label">Patterns (${((Number(sig.pattern_confidence) || 0) * 100).toFixed(0)}%)</div>
                         <div class="patterns-list">
                             ${sig.patterns.map(p => `<span class="pattern-tag">${p}</span>`).join('')}
                         </div>
@@ -1790,11 +1812,11 @@
                 let details = `
                 <div class="signal-detail">
                     <span class="label">Konfidenz</span>
-                    <span class="value">${((sig.pattern_confidence || 0) * 100).toFixed(0)}%</span>
+                    <span class="value">${((Number(sig.pattern_confidence) || 0) * 100).toFixed(0)}%</span>
                 </div>
                 <div class="signal-detail">
                     <span class="label">Kursziel</span>
-                    <span class="value">${sig.price_target ? sig.price_target.toFixed(2) : '-'}</span>
+                    <span class="value">${sig.price_target != null ? Number(sig.price_target).toFixed(2) : '-'}</span>
                 </div>`;
 
                 if (sig.patterns && sig.patterns.length > 0) {
@@ -1815,7 +1837,7 @@
                 let details = `
                 <div class="signal-detail full-width">
                     <span class="label">Stärke</span>
-                    <span class="value">${((sig.pattern_strength || 0) * 100).toFixed(0)}%</span>
+                    <span class="value">${((Number(sig.pattern_strength) || 0) * 100).toFixed(0)}%</span>
                 </div>`;
 
                 if (sig.patterns && sig.patterns.length > 0) {
@@ -1883,7 +1905,7 @@
             // ===== Meta-Informationen =====
             html += `
             <div class="detail-section">
-                <div class="detail-section-header">Meta</div>
+                <div class="detail-section-header">Zeitstempel</div>
                 <div class="meta-info">
                     <div class="meta-item">
                         <span class="label">Erstellt:</span>
@@ -1893,18 +1915,10 @@
                         <span class="label">Ziel-Zeit:</span>
                         <span>${data.target_time ? formatDateTime(data.target_time) : '-'}</span>
                     </div>
-                    <div class="meta-item">
-                        <span class="label">Horizon:</span>
-                        <span>${data.horizon || '-'}</span>
-                    </div>
+                    ${data.evaluated_at ? `
                     <div class="meta-item">
                         <span class="label">Ausgewertet:</span>
-                        <span>${data.evaluated_at ? formatDateTime(data.evaluated_at) : 'Ausstehend'}</span>
-                    </div>
-                    ${data.is_correct !== null ? `
-                    <div class="meta-item">
-                        <span class="label">Ergebnis:</span>
-                        <span class="${data.is_correct ? 'score-high' : 'score-low'}">${data.is_correct ? 'Korrekt' : 'Falsch'}</span>
+                        <span>${formatDateTime(data.evaluated_at)}</span>
                     </div>` : ''}
                 </div>
             </div>`;
