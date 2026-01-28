@@ -169,16 +169,44 @@ class ScoringService:
         # Richtung bestimmen (Mehrheitsentscheidung)
         direction = self._determine_direction(directions)
 
-        # Signal Alignment bestimmen
+        # Signal Alignment bestimmen (mit Mindestanzahl)
         alignment = self._determine_alignment(directions)
 
+        # Coverage-Penalty: Weniger verfügbare Signale = niedrigerer Score
+        signals_count = len(scores)
+        coverage_factor = self._calculate_coverage_factor(signals_count)
+        composite = composite * coverage_factor
+
         # Alignment-basierter Bonus/Penalty auf Composite
-        if alignment == SignalAlignment.STRONG:
-            composite = min(100, composite * 1.1)  # 10% Bonus
-        elif alignment == SignalAlignment.CONFLICTING:
-            composite = composite * 0.9  # 10% Penalty
+        # Nur wenn genügend Signale für aussagekräftiges Alignment vorhanden
+        if signals_count >= settings.min_signals_for_moderate_alignment:
+            if alignment == SignalAlignment.STRONG:
+                composite = min(100, composite * 1.1)  # 10% Bonus
+            elif alignment == SignalAlignment.CONFLICTING:
+                composite = composite * 0.9  # 10% Penalty
 
         return round(composite, 1), direction, drivers, alignment
+
+    def _calculate_coverage_factor(self, signals_count: int) -> float:
+        """
+        Berechnet den Coverage-Faktor basierend auf verfügbaren Signalen.
+
+        Weniger Signale = niedrigerer maximaler Score.
+        Beispiel mit min_signals_for_full_score=4 und penalty=0.15:
+        - 4+ Signale: 100% (Faktor 1.0)
+        - 3 Signale: 85% (Faktor 0.85)
+        - 2 Signale: 70% (Faktor 0.70)
+        - 1 Signal: 55% (Faktor 0.55)
+        """
+        if signals_count >= settings.min_signals_for_full_score:
+            return 1.0
+
+        missing_signals = settings.min_signals_for_full_score - signals_count
+        penalty = missing_signals * settings.coverage_penalty_factor
+        factor = 1.0 - penalty
+
+        # Mindestens min_coverage_factor behalten
+        return max(settings.min_coverage_factor, factor)
 
     def _determine_direction(self, directions: list[SignalDirection]) -> SignalDirection:
         """Bestimmt die Gesamt-Richtung aus allen Signal-Richtungen.
@@ -202,7 +230,12 @@ class ScoringService:
             return SignalDirection.NEUTRAL
 
     def _determine_alignment(self, directions: list[SignalDirection]) -> SignalAlignment:
-        """Bestimmt wie gut die Signale übereinstimmen."""
+        """
+        Bestimmt wie gut die Signale übereinstimmen.
+
+        STRONG erfordert mindestens min_signals_for_strong_alignment (default: 3) Signale.
+        MODERATE erfordert mindestens min_signals_for_moderate_alignment (default: 2) Signale.
+        """
         if not directions:
             return SignalAlignment.MIXED
 
@@ -216,13 +249,20 @@ class ScoringService:
         short_count = sum(1 for d in non_neutral if d == SignalDirection.SHORT)
         total = len(non_neutral)
 
-        # Alle in eine Richtung
+        # STRONG: Alle in eine Richtung UND genügend Signale
         if long_count == total or short_count == total:
-            return SignalAlignment.STRONG
+            if total >= settings.min_signals_for_strong_alignment:
+                return SignalAlignment.STRONG
+            elif total >= settings.min_signals_for_moderate_alignment:
+                return SignalAlignment.MODERATE
+            else:
+                # Zu wenige Signale für aussagekräftiges Alignment
+                return SignalAlignment.MIXED
 
-        # Klare Mehrheit (>= 75%)
-        if long_count / total >= 0.75 or short_count / total >= 0.75:
-            return SignalAlignment.MODERATE
+        # Klare Mehrheit (>= 75%) mit genügend Signalen
+        if total >= settings.min_signals_for_moderate_alignment:
+            if long_count / total >= 0.75 or short_count / total >= 0.75:
+                return SignalAlignment.MODERATE
 
         # Mix mit einer Tendenz
         if long_count > short_count or short_count > long_count:

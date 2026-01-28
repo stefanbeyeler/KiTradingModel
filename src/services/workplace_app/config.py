@@ -47,6 +47,15 @@ class WorkplaceSettings(BaseSettings):
     alignment_bonus: float = 15.0  # Bonus wenn Signale übereinstimmen
     alignment_penalty: float = -10.0  # Penalty bei Widerspruch
 
+    # Coverage-Penalty (fehlende Signale reduzieren Score)
+    min_signals_for_full_score: int = 4  # Mindestens 4 Signale für vollen Score
+    coverage_penalty_factor: float = 0.15  # 15% Reduktion pro fehlendem Signal
+    min_coverage_factor: float = 0.5  # Mindestens 50% des Scores behalten
+
+    # Alignment-Anforderungen
+    min_signals_for_strong_alignment: int = 3  # Mindestens 3 Signale für STRONG
+    min_signals_for_moderate_alignment: int = 2  # Mindestens 2 für MODERATE
+
     # Schwellwerte
     high_confidence_threshold: float = 75.0
     moderate_confidence_threshold: float = 60.0
