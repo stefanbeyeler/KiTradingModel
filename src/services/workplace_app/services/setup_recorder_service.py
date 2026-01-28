@@ -110,6 +110,16 @@ class SetupRecorderService:
             if setup.confidence_level:
                 confidence_str = setup.confidence_level.value
 
+            # Build complete signals dict including CNN-LSTM
+            signals_dict = {
+                "nhits": _signal_to_dict(setup.nhits_signal) if hasattr(setup, 'nhits_signal') and setup.nhits_signal else None,
+                "hmm": _signal_to_dict(setup.hmm_signal) if hasattr(setup, 'hmm_signal') and setup.hmm_signal else None,
+                "tcn": _signal_to_dict(setup.tcn_signal) if hasattr(setup, 'tcn_signal') and setup.tcn_signal else None,
+                "candlestick": _signal_to_dict(setup.candlestick_signal) if hasattr(setup, 'candlestick_signal') and setup.candlestick_signal else None,
+                "technical": _signal_to_dict(setup.technical_signal) if hasattr(setup, 'technical_signal') and setup.technical_signal else None,
+                "cnn_lstm": _signal_to_dict(setup.cnn_lstm_signal) if hasattr(setup, 'cnn_lstm_signal') and setup.cnn_lstm_signal else None,
+            }
+
             prediction_data = {
                 "service": "workplace",
                 "symbol": setup.symbol,
@@ -119,13 +129,15 @@ class SetupRecorderService:
                     "direction": setup.direction.value if setup.direction else "neutral",
                     "composite_score": setup.composite_score,
                     "confidence_level": confidence_str,
-                    "signals": {
-                        "nhits": _signal_to_dict(setup.nhits_signal) if hasattr(setup, 'nhits_signal') and setup.nhits_signal else None,
-                        "hmm": _signal_to_dict(setup.hmm_signal) if hasattr(setup, 'hmm_signal') and setup.hmm_signal else None,
-                        "tcn": _signal_to_dict(setup.tcn_signal) if hasattr(setup, 'tcn_signal') and setup.tcn_signal else None,
-                        "candlestick": _signal_to_dict(setup.candlestick_signal) if hasattr(setup, 'candlestick_signal') and setup.candlestick_signal else None,
-                        "technical": _signal_to_dict(setup.technical_signal) if hasattr(setup, 'technical_signal') and setup.technical_signal else None,
-                    },
+                    "signals": signals_dict,
+                    # Aggregation metadata
+                    "signal_alignment": setup.signal_alignment.value if hasattr(setup, 'signal_alignment') and setup.signal_alignment else "mixed",
+                    "key_drivers": setup.key_drivers if hasattr(setup, 'key_drivers') else [],
+                    "signals_available": setup.signals_available if hasattr(setup, 'signals_available') else 0,
+                    # Multi-Timeframe scores
+                    "timeframe_scores": setup.timeframe_scores if hasattr(setup, 'timeframe_scores') else None,
+                    # Price data
+                    "current_price": setup.current_price if hasattr(setup, 'current_price') else None,
                     "entry_price": entry_price,
                     "stop_loss": getattr(setup, 'stop_loss', None),
                     "take_profit": getattr(setup, 'take_profit', None),

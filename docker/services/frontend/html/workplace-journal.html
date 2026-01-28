@@ -497,6 +497,366 @@
                 padding: 0.5rem;
             }
         }
+
+        /* Clickable rows */
+        .journal-table tbody tr {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        .journal-table tbody tr:hover {
+            background: rgba(100, 200, 255, 0.08);
+        }
+
+        /* Detail Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            background: #1a1a2e;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-header .symbol-badge {
+            font-size: 1rem;
+            color: #64c8ff;
+        }
+
+        .modal-header .tf-badge {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            background: rgba(100, 200, 255, 0.15);
+            border-radius: 4px;
+            color: #94a3b8;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        /* Detail Sections */
+        .detail-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-section-header {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64c8ff;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        /* Overview Grid */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .overview-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .overview-item .label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .overview-item .value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .overview-item .value.score-high { color: #10b981; }
+        .overview-item .value.score-med { color: #f59e0b; }
+        .overview-item .value.score-low { color: #ef4444; }
+        .overview-item .value.long { color: #10b981; }
+        .overview-item .value.short { color: #ef4444; }
+        .overview-item .value.neutral { color: #94a3b8; }
+
+        /* Key Drivers */
+        .key-drivers-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .key-driver {
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+            color: #e8e8e8;
+        }
+
+        /* Timeframe Scores */
+        .tf-scores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .tf-score-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .tf-score-item .tf-name {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 0.25rem;
+        }
+
+        .tf-score-item .tf-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .tf-score-item .tf-dir {
+            font-size: 0.7rem;
+            margin-top: 0.2rem;
+        }
+
+        /* Signal Cards */
+        .signals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .signal-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .signal-card.unavailable {
+            opacity: 0.5;
+        }
+
+        .signal-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .signal-card-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #e8e8e8;
+        }
+
+        .signal-card-badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .signal-card-badge.long {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .signal-card-badge.short {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .signal-card-badge.neutral {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+        }
+
+        .signal-card-badge.unavailable {
+            background: rgba(100, 100, 100, 0.2);
+            color: #64748b;
+        }
+
+        .signal-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .signal-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+        }
+
+        .signal-detail .label {
+            color: #64748b;
+        }
+
+        .signal-detail .value {
+            color: #e8e8e8;
+            font-weight: 500;
+        }
+
+        .signal-detail.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .signal-patterns {
+            grid-column: 1 / -1;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .signal-patterns .label {
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .signal-patterns .patterns-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .pattern-tag {
+            background: rgba(100, 200, 255, 0.1);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: #64c8ff;
+        }
+
+        /* Price Info */
+        .price-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .price-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .price-item .label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .price-item .value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1rem;
+            color: #f0f0f0;
+        }
+
+        /* Meta Info */
+        .meta-info {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .meta-item .label {
+            color: #475569;
+        }
+
+        /* Responsive Modal */
+        @media (max-width: 768px) {
+            .overview-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .signals-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .price-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -642,6 +1002,26 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>
+                    <span class="symbol-badge" id="modalSymbol">BTCUSD</span>
+                    <span class="tf-badge" id="modalTimeframe">H1</span>
+                    Setup Details
+                </h2>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Lade Details...</p>
                 </div>
             </div>
         </div>
@@ -888,14 +1268,14 @@
                 const scoreClass = score >= 75 ? 'high' : score >= 50 ? 'medium' : 'low';
                 const alignClass = alignment === 'strong' ? 'high' : alignment === 'moderate' ? 'medium' : 'low';
 
-                html += `<tr>
+                html += `<tr onclick="openDetailModal('${p.prediction_id}')" title="Klicken für Details">
                     <td class="timestamp">${predictedAt}</td>
                     <td class="symbol-cell">${p.symbol}</td>
                     <td>${p.timeframe}</td>
                     <td><span class="direction-badge ${direction}">${direction.toUpperCase()}</span></td>
                     <td class="entry-price">${entryPrice}</td>
                     <td><span class="score-value ${scoreClass}">${score.toFixed(1)}</span></td>
-                    <td class="signals-count">${signalsCount}/5</td>
+                    <td class="signals-count">${signalsCount}/6</td>
                     <td><span class="alignment-badge ${alignClass}">${alignment}</span></td>
                     <td class="timestamp">${targetTime}</td>
                     <td>${evalBadge}</td>
@@ -935,7 +1315,7 @@
 
         function analyzeSignals(signals, setupDirection) {
             // Zähle verfügbare Signale und berechne Alignment
-            const serviceNames = ['nhits', 'hmm', 'tcn', 'candlestick', 'technical'];
+            const serviceNames = ['nhits', 'hmm', 'tcn', 'candlestick', 'technical', 'cnn_lstm'];
             let availableCount = 0;
             let sameDirection = 0;
             let oppositeDirection = 0;
@@ -949,6 +1329,8 @@
                     let sigDir = 'neutral';
                     if (sig.direction) {
                         sigDir = sig.direction;
+                    } else if (sig.price_direction) {
+                        sigDir = sig.price_direction;  // CNN-LSTM
                     } else if (sig.alignment === 'aligned') {
                         sigDir = setupDirection;
                     } else if (sig.alignment === 'contrary') {
@@ -1161,6 +1543,396 @@
                 btn.disabled = false;
                 btn.textContent = 'Evaluation starten';
             }
+        }
+
+        // ==================== Detail Modal Functions ====================
+
+        async function openDetailModal(predictionId) {
+            const modal = document.getElementById('detailModal');
+            const modalBody = document.getElementById('modalBody');
+
+            modal.classList.add('active');
+            modalBody.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Lade Details...</p></div>`;
+
+            try {
+                const response = await fetch(`${DATA_SERVICE_URL}/api/v1/predictions/${predictionId}`);
+                if (!response.ok) throw new Error('Details nicht verfügbar');
+
+                const data = await response.json();
+                renderDetailContent(data);
+
+            } catch (e) {
+                console.error('Fehler beim Laden der Details:', e);
+                modalBody.innerHTML = `<div class="empty-state">
+                    <h3>Fehler beim Laden</h3>
+                    <p>${e.message}</p>
+                </div>`;
+            }
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        function closeModal(event) {
+            if (event.target === event.currentTarget) {
+                closeDetailModal();
+            }
+        }
+
+        // Keyboard handler for ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeDetailModal();
+            }
+        });
+
+        function renderDetailContent(data) {
+            const pred = data.prediction || {};
+            const signals = pred.signals || {};
+
+            document.getElementById('modalSymbol').textContent = data.symbol;
+            document.getElementById('modalTimeframe').textContent = data.timeframe;
+
+            const direction = pred.direction || 'neutral';
+            const score = pred.composite_score || 0;
+            const confidence = pred.confidence_level || 'low';
+            const alignment = pred.signal_alignment || 'mixed';
+            const signalsAvailable = pred.signals_available || 0;
+            const keyDrivers = pred.key_drivers || [];
+            const timeframeScores = pred.timeframe_scores || {};
+
+            const scoreClass = score >= 75 ? 'score-high' : score >= 50 ? 'score-med' : 'score-low';
+
+            let html = '';
+
+            // ===== Übersicht =====
+            html += `
+            <div class="detail-section">
+                <div class="detail-section-header">Übersicht</div>
+                <div class="overview-grid">
+                    <div class="overview-item">
+                        <div class="label">Score</div>
+                        <div class="value ${scoreClass}">${score.toFixed(1)}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Richtung</div>
+                        <div class="value ${direction}">${direction.toUpperCase()}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Konfidenz</div>
+                        <div class="value">${confidence.toUpperCase()}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Signale</div>
+                        <div class="value">${signalsAvailable}/6</div>
+                    </div>
+                </div>
+            </div>`;
+
+            // ===== Key Drivers =====
+            if (keyDrivers.length > 0) {
+                html += `
+                <div class="detail-section">
+                    <div class="detail-section-header">Key Drivers</div>
+                    <div class="key-drivers-list">
+                        ${keyDrivers.map(d => `<span class="key-driver">${d}</span>`).join('')}
+                    </div>
+                </div>`;
+            }
+
+            // ===== Timeframe Scores =====
+            if (Object.keys(timeframeScores).length > 0) {
+                html += `
+                <div class="detail-section">
+                    <div class="detail-section-header">Trend-Stärke</div>
+                    <div class="tf-scores-grid">`;
+
+                const tfOrder = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1', 'W1'];
+                tfOrder.forEach(tf => {
+                    if (timeframeScores[tf] !== undefined) {
+                        const tfScore = timeframeScores[tf];
+                        const tfDir = tfScore > 0 ? 'long' : tfScore < 0 ? 'short' : 'neutral';
+                        const tfClass = tfScore > 0 ? 'long' : tfScore < 0 ? 'short' : 'neutral';
+                        html += `
+                        <div class="tf-score-item">
+                            <div class="tf-name">${tf}</div>
+                            <div class="tf-value ${tfClass}">${Math.abs(tfScore).toFixed(1)}</div>
+                            <div class="tf-dir ${tfClass}">${tfDir.toUpperCase()}</div>
+                        </div>`;
+                    }
+                });
+
+                html += `</div></div>`;
+            }
+
+            // ===== Signale =====
+            html += `
+            <div class="detail-section">
+                <div class="detail-section-header">Signale</div>
+                <div class="signals-grid">`;
+
+            // NHITS Signal
+            html += renderSignalCard('NHITS', signals.nhits, (sig) => `
+                <div class="signal-detail">
+                    <span class="label">Trend Prob.</span>
+                    <span class="value">${((sig.trend_probability || 0) * 100).toFixed(0)}%</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Modell-Konf.</span>
+                    <span class="value">${sig.model_confidence ? (sig.model_confidence * 100).toFixed(0) + '%' : '-'}</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Prognose 1h</span>
+                    <span class="value">${sig.forecast_change_1h !== null ? sig.forecast_change_1h.toFixed(2) + '%' : '-'}</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Prognose 24h</span>
+                    <span class="value">${sig.forecast_change_24h !== null ? sig.forecast_change_24h.toFixed(2) + '%' : '-'}</span>
+                </div>
+            `);
+
+            // HMM Signal
+            html += renderSignalCard('HMM', signals.hmm, (sig) => `
+                <div class="signal-detail">
+                    <span class="label">Regime</span>
+                    <span class="value">${sig.regime || '-'}</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Wahrsch.</span>
+                    <span class="value">${((sig.regime_probability || 0) * 100).toFixed(0)}%</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Score</span>
+                    <span class="value">${(sig.signal_score || 0).toFixed(1)}</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Dauer</span>
+                    <span class="value">${sig.regime_duration ? sig.regime_duration + ' Bars' : '-'}</span>
+                </div>
+                <div class="signal-detail full-width">
+                    <span class="label">Alignment</span>
+                    <span class="value">${sig.alignment || '-'}</span>
+                </div>
+            `);
+
+            // Technical Signal
+            html += renderSignalCard('Technisch', signals.technical, (sig) => `
+                <div class="signal-detail">
+                    <span class="label">RSI</span>
+                    <span class="value">${sig.rsi !== null ? sig.rsi.toFixed(1) : '-'} (${sig.rsi_signal || '-'})</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">MACD</span>
+                    <span class="value">${sig.macd_signal || '-'}</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Trend Align.</span>
+                    <span class="value">${((sig.trend_alignment || 0) * 100).toFixed(0)}%</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">BB Position</span>
+                    <span class="value">${sig.bb_position !== null ? (sig.bb_position * 100).toFixed(0) + '%' : '-'}</span>
+                </div>
+            `);
+
+            // CNN-LSTM Signal
+            html += renderSignalCard('CNN-LSTM', signals.cnn_lstm, (sig) => {
+                let details = `
+                <div class="signal-detail">
+                    <span class="label">Preis-Richt.</span>
+                    <span class="value">${sig.price_direction || '-'}</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Preis-Konf.</span>
+                    <span class="value">${((sig.price_confidence || 0) * 100).toFixed(0)}%</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Regime</span>
+                    <span class="value">${sig.regime || '-'}</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Regime-Prob.</span>
+                    <span class="value">${((sig.regime_probability || 0) * 100).toFixed(0)}%</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">1h Prognose</span>
+                    <span class="value">${sig.forecast_change_1h !== null ? sig.forecast_change_1h.toFixed(2) + '%' : '-'}</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">1d Prognose</span>
+                    <span class="value">${sig.forecast_change_1d !== null ? sig.forecast_change_1d.toFixed(2) + '%' : '-'}</span>
+                </div>`;
+
+                if (sig.patterns && sig.patterns.length > 0) {
+                    details += `
+                    <div class="signal-patterns">
+                        <div class="label">Patterns (${((sig.pattern_confidence || 0) * 100).toFixed(0)}%)</div>
+                        <div class="patterns-list">
+                            ${sig.patterns.map(p => `<span class="pattern-tag">${p}</span>`).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                if (sig.model_version) {
+                    details += `
+                    <div class="signal-detail full-width">
+                        <span class="label">Model</span>
+                        <span class="value">${sig.model_version}</span>
+                    </div>`;
+                }
+
+                return details;
+            });
+
+            // TCN Signal
+            html += renderSignalCard('TCN', signals.tcn, (sig) => {
+                let details = `
+                <div class="signal-detail">
+                    <span class="label">Konfidenz</span>
+                    <span class="value">${((sig.pattern_confidence || 0) * 100).toFixed(0)}%</span>
+                </div>
+                <div class="signal-detail">
+                    <span class="label">Kursziel</span>
+                    <span class="value">${sig.price_target ? sig.price_target.toFixed(2) : '-'}</span>
+                </div>`;
+
+                if (sig.patterns && sig.patterns.length > 0) {
+                    details += `
+                    <div class="signal-patterns">
+                        <div class="label">Patterns</div>
+                        <div class="patterns-list">
+                            ${sig.patterns.map(p => `<span class="pattern-tag">${p}</span>`).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                return details;
+            });
+
+            // Candlestick Signal
+            html += renderSignalCard('Candlestick', signals.candlestick, (sig) => {
+                let details = `
+                <div class="signal-detail full-width">
+                    <span class="label">Stärke</span>
+                    <span class="value">${((sig.pattern_strength || 0) * 100).toFixed(0)}%</span>
+                </div>`;
+
+                if (sig.patterns && sig.patterns.length > 0) {
+                    details += `
+                    <div class="signal-patterns">
+                        <div class="label">Patterns</div>
+                        <div class="patterns-list">
+                            ${sig.patterns.map(p => `<span class="pattern-tag">${p}</span>`).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                return details;
+            });
+
+            html += `</div></div>`;
+
+            // ===== Preis-Info =====
+            const entryPrice = pred.entry_price;
+            const currentPrice = pred.current_price;
+            const stopLoss = pred.stop_loss;
+            const takeProfit = pred.take_profit;
+
+            if (entryPrice || currentPrice) {
+                html += `
+                <div class="detail-section">
+                    <div class="detail-section-header">Preis-Info</div>
+                    <div class="price-info-grid">`;
+
+                if (entryPrice) {
+                    html += `
+                    <div class="price-item">
+                        <div class="label">Entry-Preis</div>
+                        <div class="value">${formatPrice(entryPrice, data.symbol)}</div>
+                    </div>`;
+                }
+
+                if (currentPrice) {
+                    html += `
+                    <div class="price-item">
+                        <div class="label">Aktueller Preis</div>
+                        <div class="value">${formatPrice(currentPrice, data.symbol)}</div>
+                    </div>`;
+                }
+
+                if (stopLoss) {
+                    html += `
+                    <div class="price-item">
+                        <div class="label">Stop-Loss</div>
+                        <div class="value">${formatPrice(stopLoss, data.symbol)}</div>
+                    </div>`;
+                }
+
+                if (takeProfit) {
+                    html += `
+                    <div class="price-item">
+                        <div class="label">Take-Profit</div>
+                        <div class="value">${formatPrice(takeProfit, data.symbol)}</div>
+                    </div>`;
+                }
+
+                html += `</div></div>`;
+            }
+
+            // ===== Meta-Informationen =====
+            html += `
+            <div class="detail-section">
+                <div class="detail-section-header">Meta</div>
+                <div class="meta-info">
+                    <div class="meta-item">
+                        <span class="label">Erstellt:</span>
+                        <span>${data.predicted_at ? formatDateTime(data.predicted_at) : '-'}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="label">Ziel-Zeit:</span>
+                        <span>${data.target_time ? formatDateTime(data.target_time) : '-'}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="label">Horizon:</span>
+                        <span>${data.horizon || '-'}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="label">Ausgewertet:</span>
+                        <span>${data.evaluated_at ? formatDateTime(data.evaluated_at) : 'Ausstehend'}</span>
+                    </div>
+                    ${data.is_correct !== null ? `
+                    <div class="meta-item">
+                        <span class="label">Ergebnis:</span>
+                        <span class="${data.is_correct ? 'score-high' : 'score-low'}">${data.is_correct ? 'Korrekt' : 'Falsch'}</span>
+                    </div>` : ''}
+                </div>
+            </div>`;
+
+            document.getElementById('modalBody').innerHTML = html;
+        }
+
+        function renderSignalCard(name, signal, detailsFn) {
+            const isAvailable = signal && signal.available;
+            const direction = signal?.direction || signal?.price_direction || 'neutral';
+            const dirClass = isAvailable ? direction : 'unavailable';
+            const dirLabel = isAvailable ? direction.toUpperCase() : 'N/A';
+
+            let html = `
+            <div class="signal-card ${!isAvailable ? 'unavailable' : ''}">
+                <div class="signal-card-header">
+                    <span class="signal-card-title">${name}</span>
+                    <span class="signal-card-badge ${dirClass}">${dirLabel}</span>
+                </div>`;
+
+            if (isAvailable) {
+                html += `<div class="signal-details">${detailsFn(signal)}</div>`;
+            } else {
+                html += `<div class="signal-details"><span style="color: #64748b;">Signal nicht verfügbar</span></div>`;
+            }
+
+            html += `</div>`;
+            return html;
         }
 
         // Initialize
