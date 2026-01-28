@@ -79,6 +79,18 @@ class SymbolService:
         self._load_from_json()
         self._cache_loaded = True
 
+    async def reload_cache(self) -> int:
+        """Force reload of all symbols from database.
+
+        Returns:
+            Number of symbols loaded
+        """
+        self._cache.clear()
+        self._cache_loaded = False
+        await self._ensure_cache_loaded()
+        logger.info(f"Symbol cache reloaded: {len(self._cache)} symbols")
+        return len(self._cache)
+
     def _load_from_json(self):
         """Load symbols from JSON file (fallback)."""
         if self._data_file.exists():

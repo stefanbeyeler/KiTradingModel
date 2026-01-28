@@ -3788,6 +3788,24 @@ async def migrate_json_to_db():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@symbol_router.post("/managed-symbols/reload-cache")
+async def reload_symbol_cache():
+    """
+    Force reload of all symbols from TimescaleDB into cache.
+
+    Use this after direct database updates to refresh the in-memory cache.
+
+    Returns:
+        Number of symbols loaded.
+    """
+    try:
+        count = await symbol_service.reload_cache()
+        return {"status": "ok", "message": f"Cache reloaded with {count} symbols", "count": count}
+    except Exception as e:
+        logger.error(f"Failed to reload symbol cache: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== Data Statistics ====================
 # NOTE: This route MUST be defined BEFORE the generic {symbol_id:path} routes
 
