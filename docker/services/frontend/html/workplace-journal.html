@@ -93,6 +93,45 @@
             background: rgba(100, 200, 255, 0.25);
         }
 
+        /* Auto-Refresh Indicator */
+        .refresh-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .refresh-countdown {
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            min-width: 2.5rem;
+            text-align: center;
+            font-family: monospace;
+            color: #64c8ff;
+        }
+
+        .refresh-indicator.paused .refresh-countdown {
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-icon {
+            background: none;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            color: #64c8ff;
+            font-size: 0.9rem;
+        }
+
+        .btn-icon:hover {
+            background: rgba(100, 200, 255, 0.1);
+        }
+
         /* Stats Cards */
         .stats-grid {
             display: grid;
@@ -867,6 +906,11 @@
             </div>
             <h1>Setup Journal</h1>
             <div class="header-right">
+                <div class="refresh-indicator" id="refreshIndicator">
+                    <span>Auto-Refresh:</span>
+                    <span class="refresh-countdown" id="refreshCountdown">15</span>
+                    <button class="btn-icon" id="refreshToggle" onclick="toggleAutoRefresh()" title="Auto-Refresh pausieren/fortsetzen">⏸</button>
+                </div>
                 <button class="btn btn-secondary" onclick="cleanupInvalid()" title="Setups ohne Entry-Preis löschen">Bereinigen</button>
                 <button class="btn btn-secondary" onclick="triggerEvaluation()">Evaluation starten</button>
                 <a href="config-workplace.html" class="btn btn-secondary">Config</a>
@@ -1992,8 +2036,92 @@
             return html;
         }
 
+        // ==================== Auto-Refresh ====================
+        let autoRefreshInterval = null;
+        let countdownInterval = null;
+        let countdownValue = 15;
+        let autoRefreshPaused = false;
+        const REFRESH_INTERVAL = 15; // Sekunden
+
+        function startAutoRefresh() {
+            // Countdown-Timer starten
+            countdownValue = REFRESH_INTERVAL;
+            updateCountdownDisplay();
+
+            countdownInterval = setInterval(() => {
+                if (!autoRefreshPaused) {
+                    countdownValue--;
+                    updateCountdownDisplay();
+
+                    if (countdownValue <= 0) {
+                        performAutoRefresh();
+                        countdownValue = REFRESH_INTERVAL;
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateCountdownDisplay() {
+            const el = document.getElementById('refreshCountdown');
+            if (el) {
+                el.textContent = countdownValue;
+            }
+        }
+
+        async function performAutoRefresh() {
+            // Scroll-Position merken
+            const scrollPos = window.scrollY;
+
+            // Daten neu laden (Filter bleiben erhalten durch forceReload=true)
+            await Promise.all([
+                loadStats(),
+                loadPredictions(true)
+            ]);
+
+            // Scroll-Position wiederherstellen
+            window.scrollTo(0, scrollPos);
+        }
+
+        function toggleAutoRefresh() {
+            autoRefreshPaused = !autoRefreshPaused;
+            const indicator = document.getElementById('refreshIndicator');
+            const toggleBtn = document.getElementById('refreshToggle');
+
+            if (autoRefreshPaused) {
+                indicator.classList.add('paused');
+                toggleBtn.textContent = '▶';
+                toggleBtn.title = 'Auto-Refresh fortsetzen';
+            } else {
+                indicator.classList.remove('paused');
+                toggleBtn.textContent = '⏸';
+                toggleBtn.title = 'Auto-Refresh pausieren';
+                // Reset countdown bei Fortsetzen
+                countdownValue = REFRESH_INTERVAL;
+                updateCountdownDisplay();
+            }
+        }
+
+        function stopAutoRefresh() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+        }
+
+        // Auto-Refresh bei Seiten-Visibility pausieren
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && !autoRefreshPaused) {
+                // Pausieren wenn Tab nicht sichtbar
+                stopAutoRefresh();
+            } else if (!document.hidden && !autoRefreshPaused) {
+                // Fortsetzen wenn Tab wieder sichtbar
+                startAutoRefresh();
+            }
+        });
+
         // Initialize
         init();
+        startAutoRefresh();
     </script>
 </body>
 </html>
