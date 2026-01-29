@@ -22,7 +22,9 @@ from ..models.schemas import (
     ConfidenceLevel,
     SignalAlignment,
     MarketRegime,
+    EntryExitLevels,
 )
+from .level_calculator_service import level_calculator
 
 
 class ScoringService:
@@ -309,6 +311,10 @@ class ScoringService:
         technical = signals.get("technical") or TechnicalSignal()
         cnn_lstm = signals.get("cnn_lstm") or CNNLSTMSignal()
 
+        # current_price aus TechnicalSignal extrahieren falls nicht übergeben
+        if current_price is None and technical.available and technical.current_price:
+            current_price = technical.current_price
+
         # Score berechnen
         composite_score, direction, key_drivers, alignment = self.calculate_composite_score(
             nhits, hmm, tcn, candlestick, technical, cnn_lstm
@@ -323,6 +329,26 @@ class ScoringService:
             technical.available,
             cnn_lstm.available,
         ])
+
+        # Entry/Exit Levels berechnen
+        entry_exit_levels = None
+        if current_price and direction != SignalDirection.NEUTRAL:
+            atr = technical.atr if technical.available else None
+            if atr:
+                # ATR-basierte Berechnung
+                entry_exit_levels = level_calculator.calculate_levels(
+                    current_price=current_price,
+                    direction=direction,
+                    atr=atr,
+                    symbol=symbol,
+                )
+            else:
+                # Fallback: Prozent-basierte Berechnung
+                entry_exit_levels = level_calculator.calculate_levels_percentage_fallback(
+                    current_price=current_price,
+                    direction=direction,
+                    symbol=symbol,
+                )
 
         return TradingSetup(
             symbol=symbol,
@@ -341,6 +367,7 @@ class ScoringService:
             key_drivers=key_drivers,
             signals_available=signals_available,
             current_price=current_price,
+            entry_exit_levels=entry_exit_levels,
         )
 
 

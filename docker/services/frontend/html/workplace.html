@@ -560,6 +560,52 @@
             opacity: 0.6;
         }
 
+        /* Entry/Exit Levels - Compact */
+        .setup-levels {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.2rem;
+            margin-top: 0.3rem;
+            font-size: 0.6rem;
+        }
+
+        .setup-levels .level {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.15rem 0.2rem;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .setup-levels .level-label {
+            font-size: 0.5rem;
+            opacity: 0.5;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .setup-levels .level-value {
+            font-weight: 600;
+            font-size: 0.6rem;
+        }
+
+        .setup-levels .level.entry .level-value {
+            color: #64c8ff;
+        }
+
+        .setup-levels .level.sl .level-value {
+            color: #f87171;
+        }
+
+        .setup-levels .level.tp .level-value {
+            color: #34d399;
+        }
+
+        .setup-levels .level.rr .level-value {
+            color: #a78bfa;
+        }
+
         /* Sidebar - Compact */
         .sidebar {
             display: flex;
@@ -2252,8 +2298,44 @@
                             Details
                         </button>
                     </div>
+                    ${setup.entry_exit_levels ? `
+                    <div class="setup-levels">
+                        <div class="level sl" title="Stop Loss">
+                            <span class="level-label">SL</span>
+                            <span class="level-value">${formatLevelPrice(setup.entry_exit_levels.stop_loss, setup.symbol)}</span>
+                        </div>
+                        <div class="level entry" title="Entry Price">
+                            <span class="level-label">Entry</span>
+                            <span class="level-value">${formatLevelPrice(setup.entry_exit_levels.entry_price, setup.symbol)}</span>
+                        </div>
+                        <div class="level tp" title="Take Profit 1">
+                            <span class="level-label">TP1</span>
+                            <span class="level-value">${formatLevelPrice(setup.entry_exit_levels.take_profit_1, setup.symbol)}</span>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             `;
+        }
+
+        // Formatiert Preise für die Level-Anzeige (kompakt)
+        function formatLevelPrice(price, symbol) {
+            if (!price) return '-';
+
+            // Für grosse Preise (BTC, Indizes): keine Dezimalen
+            if (price > 1000) {
+                return price.toFixed(0);
+            }
+            // Für mittlere Preise: 2 Dezimalen
+            if (price > 10) {
+                return price.toFixed(2);
+            }
+            // Für kleine Preise: 4 Dezimalen
+            if (price > 0.01) {
+                return price.toFixed(4);
+            }
+            // Für sehr kleine Preise: 6 Dezimalen
+            return price.toFixed(6);
         }
 
         async function loadWatchlist() {
@@ -2620,8 +2702,76 @@
                         </div>
                     </div>
                     ` : ''}
+
+                    ${renderLevelsSection(setup)}
                 </div>
             `;
+        }
+
+        function renderLevelsSection(setup) {
+            if (!setup.entry_exit_levels) {
+                return '';
+            }
+
+            const levels = setup.entry_exit_levels;
+            const direction = setup.direction;
+            const isLong = direction === 'long';
+
+            return `
+                <div style="margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div class="detail-card-title" style="margin-bottom: 0.3rem;">
+                        <span style="color: #a78bfa;">🎯</span> Entry/Exit Levels
+                    </div>
+                    <div class="detail-grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="detail-card">
+                            <div class="detail-card-title">Entry</div>
+                            <div class="detail-card-value" style="color: #64c8ff;">
+                                ${levels.entry_price ? formatDetailPrice(levels.entry_price) : '-'}
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-card-title">Stop Loss</div>
+                            <div class="detail-card-value" style="color: #f87171;">
+                                ${levels.stop_loss ? formatDetailPrice(levels.stop_loss) : '-'}
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-card-title">R:R</div>
+                            <div class="detail-card-value" style="color: #a78bfa;">
+                                ${levels.risk_reward_ratio ? levels.risk_reward_ratio.toFixed(1) + ':1' : '-'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 0.3rem;">
+                        <div class="detail-card">
+                            <div class="detail-card-title">TP1</div>
+                            <div class="detail-card-value" style="color: #34d399;">
+                                ${levels.take_profit_1 ? formatDetailPrice(levels.take_profit_1) : '-'}
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-card-title">TP2</div>
+                            <div class="detail-card-value" style="color: #34d399;">
+                                ${levels.take_profit_2 ? formatDetailPrice(levels.take_profit_2) : '-'}
+                            </div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-card-title">TP3</div>
+                            <div class="detail-card-value" style="color: #34d399;">
+                                ${levels.take_profit_3 ? formatDetailPrice(levels.take_profit_3) : '-'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatDetailPrice(price) {
+            if (!price) return '-';
+            if (price > 1000) return price.toLocaleString('de-CH', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            if (price > 10) return price.toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (price > 0.01) return price.toLocaleString('de-CH', {minimumFractionDigits: 4, maximumFractionDigits: 4});
+            return price.toLocaleString('de-CH', {minimumFractionDigits: 6, maximumFractionDigits: 6});
         }
 
         function renderTrendStrengthSection(trendStrength) {

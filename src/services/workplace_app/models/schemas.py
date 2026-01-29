@@ -4,6 +4,8 @@ Pydantic Schemas für Trading Workplace Service.
 Definiert Request/Response-Modelle für alle API-Endpoints.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from typing import Optional
@@ -102,6 +104,8 @@ class TechnicalSignal(BaseModel):
     macd_signal: str = Field(default="neutral", description="bullish, neutral, bearish")
     trend_alignment: float = Field(default=0.5, ge=0.0, le=1.0, description="Trend-Übereinstimmung")
     bb_position: Optional[float] = Field(None, description="Position in Bollinger Bands (0-1)")
+    atr: Optional[float] = Field(None, description="ATR (14) für Level-Berechnung")
+    current_price: Optional[float] = Field(None, description="Aktueller Preis")
 
 
 class CNNLSTMSignal(BaseModel):
@@ -160,6 +164,11 @@ class TradingSetup(BaseModel):
 
     # Preise
     current_price: Optional[float] = Field(None, description="Aktueller Preis")
+
+    # Entry/Exit Levels
+    entry_exit_levels: Optional["EntryExitLevels"] = Field(
+        None, description="Berechnete Entry/Exit-Levels (Entry, SL, TP1-3)"
+    )
 
     # Multi-Timeframe Scores
     timeframe_scores: Optional[dict[str, float]] = Field(None, description="Scores pro Timeframe")

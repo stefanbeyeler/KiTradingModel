@@ -14,17 +14,17 @@ from ..config import settings
 from ..models.schemas import TradingSetup, SignalDirection
 
 
-# Horizon mapping: timeframe -> evaluation delay
+# Horizon mapping: timeframe -> evaluation delay (längere Horizonte für realistische Evaluation)
 HORIZON_DELAYS = {
-    "M1": timedelta(minutes=5),
-    "M5": timedelta(minutes=15),
-    "M15": timedelta(minutes=45),
-    "M30": timedelta(hours=1, minutes=30),
-    "H1": timedelta(hours=4),
-    "H4": timedelta(hours=12),
-    "D1": timedelta(days=1),
-    "W1": timedelta(weeks=1),
-    "MN": timedelta(days=30),
+    "M1": timedelta(minutes=10),
+    "M5": timedelta(minutes=30),
+    "M15": timedelta(hours=1),
+    "M30": timedelta(hours=2),
+    "H1": timedelta(hours=8),       # 8x Timeframe für Trendbestätigung
+    "H4": timedelta(days=1),        # Nach Overnight-Session
+    "D1": timedelta(days=3),        # 3 Tage für Daily-Trends
+    "W1": timedelta(weeks=2),       # 2 Wochen
+    "MN": timedelta(days=60),       # 2 Monate
 }
 
 
@@ -140,8 +140,12 @@ class SetupRecorderService:
                     # Price data
                     "current_price": setup.current_price if hasattr(setup, 'current_price') else None,
                     "entry_price": entry_price,
-                    "stop_loss": getattr(setup, 'stop_loss', None),
-                    "take_profit": getattr(setup, 'take_profit', None),
+                    # Entry/Exit Levels für TP/SL-basierte Evaluation
+                    "stop_loss": setup.entry_exit_levels.stop_loss if hasattr(setup, 'entry_exit_levels') and setup.entry_exit_levels else None,
+                    "take_profit_1": setup.entry_exit_levels.take_profit_1 if hasattr(setup, 'entry_exit_levels') and setup.entry_exit_levels else None,
+                    "take_profit_2": setup.entry_exit_levels.take_profit_2 if hasattr(setup, 'entry_exit_levels') and setup.entry_exit_levels else None,
+                    "take_profit_3": setup.entry_exit_levels.take_profit_3 if hasattr(setup, 'entry_exit_levels') and setup.entry_exit_levels else None,
+                    "risk_reward_ratio": setup.entry_exit_levels.risk_reward_ratio if hasattr(setup, 'entry_exit_levels') and setup.entry_exit_levels else None,
                 },
                 "confidence": setup.composite_score / 100.0 if setup.composite_score else None,
                 "target_time": target_time.isoformat(),
@@ -251,6 +255,8 @@ class SetupRecorderService:
             pred_data = pred_detail.get("prediction", {})
             direction = pred_data.get("direction", "neutral")
             entry_price = pred_data.get("entry_price")
+            stop_loss = pred_data.get("stop_loss")
+            take_profit_1 = pred_data.get("take_profit_1")
             predicted_at = pred_detail.get("predicted_at")
 
             if not entry_price or direction == "neutral":
@@ -294,17 +300,57 @@ class SetupRecorderService:
             # Calculate price change
             price_change = (current_price - entry_price) / entry_price * 100
 
-            # Determine if prediction was correct
-            is_correct = False
-            if direction == "long" and price_change > 0:
-                is_correct = True
-            elif direction == "short" and price_change < 0:
-                is_correct = True
+            # TP/SL-basierte Evaluation: Erfolg = TP1 erreicht, Fehlschlag = SL erreicht
+            is_correct = None  # None = noch nicht entschieden (Timeout ohne TP/SL)
+            outcome_reason = "timeout"
 
-            # Calculate accuracy score (how much it moved in predicted direction)
-            accuracy_score = abs(price_change) / 10.0  # Normalize to 0-1 range (10% = 1.0)
-            if not is_correct:
-                accuracy_score = -accuracy_score
+            if direction == "long":
+                if take_profit_1 and current_price >= take_profit_1:
+                    is_correct = True
+                    outcome_reason = "tp1_reached"
+                elif stop_loss and current_price <= stop_loss:
+                    is_correct = False
+                    outcome_reason = "sl_hit"
+                else:
+                    # Timeout: Prüfe ob mindestens in richtige Richtung
+                    is_correct = price_change > 0.3  # Min 0.3% Bewegung
+                    outcome_reason = "timeout_direction"
+            elif direction == "short":
+                if take_profit_1 and current_price <= take_profit_1:
+                    is_correct = True
+                    outcome_reason = "tp1_reached"
+                elif stop_loss and current_price >= stop_loss:
+                    is_correct = False
+                    outcome_reason = "sl_hit"
+                else:
+                    # Timeout: Prüfe ob mindestens in richtige Richtung
+                    is_correct = price_change < -0.3  # Min 0.3% Bewegung
+                    outcome_reason = "timeout_direction"
+
+            # Calculate accuracy score
+            if take_profit_1 and stop_loss:
+                # Berechne wie weit Richtung TP vs SL
+                if direction == "long":
+                    tp_distance = take_profit_1 - entry_price
+                    sl_distance = entry_price - stop_loss
+                    price_move = current_price - entry_price
+                    if tp_distance > 0:
+                        accuracy_score = price_move / tp_distance  # 1.0 = TP erreicht
+                    else:
+                        accuracy_score = 0
+                else:  # short
+                    tp_distance = entry_price - take_profit_1
+                    sl_distance = stop_loss - entry_price
+                    price_move = entry_price - current_price
+                    if tp_distance > 0:
+                        accuracy_score = price_move / tp_distance
+                    else:
+                        accuracy_score = 0
+            else:
+                # Fallback: Prozent-basiert
+                accuracy_score = abs(price_change) / 10.0
+                if not is_correct:
+                    accuracy_score = -accuracy_score
 
             # Send evaluation to Data Service
             eval_response = await client.put(
@@ -314,6 +360,9 @@ class SetupRecorderService:
                         "current_price": current_price,
                         "price_change_percent": price_change,
                         "direction_correct": is_correct,
+                        "outcome_reason": outcome_reason,
+                        "stop_loss": stop_loss,
+                        "take_profit_1": take_profit_1,
                     },
                     "is_correct": is_correct,
                     "accuracy_score": min(1.0, max(-1.0, accuracy_score)),

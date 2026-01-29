@@ -330,6 +330,9 @@ class SignalAggregatorService:
             if all(v is not None for v in [bb_upper, bb_lower, current_price]) and bb_upper != bb_lower:
                 bb_position = (current_price - bb_lower) / (bb_upper - bb_lower)
 
+            # ATR für Level-Berechnung
+            atr = indicators.get("atr", {}).get("value")
+
             return TechnicalSignal(
                 available=True,
                 rsi=rsi,
@@ -337,6 +340,8 @@ class SignalAggregatorService:
                 macd_signal=macd_signal,
                 trend_alignment=trend_alignment,
                 bb_position=bb_position,
+                atr=atr,
+                current_price=current_price,
             )
         except Exception as e:
             logger.debug(f"Technical fetch error for {symbol}: {e}")
