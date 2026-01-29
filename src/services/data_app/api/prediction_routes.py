@@ -297,3 +297,31 @@ async def reset_stale_evaluations(
         "service": result.get("service"),
         "message": f"{result.get('reset', 0)} stale evaluations reset for re-evaluation",
     }
+
+
+@router.delete("/delete-all/{service}")
+async def delete_all_predictions(
+    service: str,
+    confirm: bool = Query(default=False, description="Bestätigung für Löschung erforderlich"),
+):
+    """
+    ALLE Vorhersagen eines Services löschen.
+
+    WARNUNG: Diese Aktion ist destruktiv und kann nicht rückgängig gemacht werden!
+    Erfordert confirm=true als Query-Parameter.
+    """
+    if not confirm:
+        return {
+            "status": "error",
+            "message": "Löschung erfordert confirm=true als Query-Parameter",
+            "deleted_count": 0,
+        }
+
+    result = await prediction_history_service.delete_all_predictions(service=service)
+
+    return {
+        "status": "ok",
+        "deleted_count": result.get("deleted", 0),
+        "service": result.get("service"),
+        "message": f"{result.get('deleted', 0)} predictions deleted for service {service}",
+    }

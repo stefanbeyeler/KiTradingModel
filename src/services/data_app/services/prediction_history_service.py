@@ -616,6 +616,38 @@ class PredictionHistoryService:
             logger.error(f"Failed to reset stale evaluations: {e}")
             return {"reset": 0, "error": str(e)}
 
+    async def delete_all_predictions(self, service: str) -> dict:
+        """
+        Delete ALL predictions for a given service.
+
+        WARNING: This is destructive and cannot be undone!
+
+        Args:
+            service: Service whose predictions should be deleted
+
+        Returns:
+            Statistics dictionary with deleted count
+        """
+        if not await self.initialize():
+            return {"deleted": 0, "error": "Service not initialized"}
+
+        try:
+            pool = timescaledb_service._pool
+            async with pool.acquire() as conn:
+                result = await conn.execute(
+                    """
+                    DELETE FROM prediction_history
+                    WHERE service = $1
+                    """,
+                    service,
+                )
+                deleted = int(result.split()[-1])
+                logger.warning(f"Deleted ALL {deleted} predictions for service {service}")
+                return {"deleted": deleted, "service": service}
+        except Exception as e:
+            logger.error(f"Failed to delete all predictions: {e}")
+            return {"deleted": 0, "error": str(e)}
+
 
 # Singleton instance
 prediction_history_service = PredictionHistoryService()
