@@ -22,6 +22,7 @@ import torch.nn as nn
 from loguru import logger
 
 from src.config.settings import settings
+from src.config.microservices import microservices_config
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -563,7 +564,7 @@ class ModelImprovementService:
         from src.config import settings
         from datetime import timezone as tz
 
-        data_service_url = getattr(settings, 'data_service_url', 'http://localhost:3001')
+        data_service_url = getattr(settings, 'data_service_url', microservices_config.data_service_url)
 
         # Make target_time timezone-aware (UTC) if needed
         target_aware = target_time

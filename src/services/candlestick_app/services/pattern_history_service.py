@@ -13,6 +13,7 @@ from typing import Optional
 
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from ..models.schemas import (
     PatternHistoryEntry,
     PatternScanRequest,
@@ -223,7 +224,7 @@ class PatternHistoryService:
 
             # Hole Daten via Data Service
             import httpx
-            data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+            data_service_url = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
             # TwelveData Interval Mapping
             interval_map = {

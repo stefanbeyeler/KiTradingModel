@@ -17,6 +17,7 @@ from pathlib import Path
 import httpx
 from loguru import logger
 
+from src.config.microservices import microservices_config
 
 DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 
@@ -107,7 +108,7 @@ class BacktestingService:
         self._results_file = Path(results_file)
         self._results: list[BacktestResult] = []
 
-        self._data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+        self._data_service_url = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
         # Scheduler state
         self._scheduler_running = False

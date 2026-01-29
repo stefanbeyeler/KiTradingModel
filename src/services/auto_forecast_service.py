@@ -22,6 +22,7 @@ from loguru import logger
 import pytz
 
 from ..config import settings
+from src.config.microservices import microservices_config
 
 
 class AutoForecastService:
@@ -62,8 +63,8 @@ class AutoForecastService:
             "W1": 604800,  # 7 days
         }
 
-        # Path for persistent config storage
-        self._config_file = "data/auto_forecast_config.json"
+        # Path for persistent config storage (use models directory which has persistent volume)
+        self._config_file = "data/models/nhits/auto_forecast_config.json"
 
         # Statistics
         self._favorites_total_forecasts: int = 0
@@ -133,7 +134,7 @@ class AutoForecastService:
 
     async def get_favorites(self) -> list[dict]:
         """Fetch favorite symbols from Data Service."""
-        data_service_url = getattr(settings, 'data_service_url', 'http://localhost:3001')
+        data_service_url = getattr(settings, 'data_service_url', microservices_config.data_service_url)
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
@@ -296,7 +297,7 @@ class AutoForecastService:
 
     async def get_non_favorites(self) -> list[dict]:
         """Fetch non-favorite symbols that have trained models from Data Service."""
-        data_service_url = getattr(settings, 'data_service_url', 'http://localhost:3001')
+        data_service_url = getattr(settings, 'data_service_url', microservices_config.data_service_url)
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(

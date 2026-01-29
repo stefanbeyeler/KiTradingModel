@@ -21,6 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from loguru import logger
 
+from src.config.microservices import microservices_config
+
 # Lazy imports for ML libraries
 joblib = None
 sklearn_metrics = None
@@ -154,7 +156,7 @@ class ScorerValidationMetrics:
 
 
 # Service URLs
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 VALIDATION_DATA_DIR = os.getenv("VALIDATION_DATA_DIR", "/app/data/models/hmm/validation_data")
 
 

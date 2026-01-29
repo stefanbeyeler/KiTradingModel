@@ -24,6 +24,9 @@ from loguru import logger
 
 from .resource_monitor import resource_monitor
 
+# Import zentrale Microservices-Konfiguration
+from src.config.microservices import microservices_config
+
 
 class TrainingServiceType(str, Enum):
     """Types of training services."""
@@ -125,41 +128,41 @@ class TrainingOrchestrator:
     5. Resource coordination (one GPU training at a time)
     """
 
-    # Service configurations
+    # Service configurations (URLs aus zentraler Konfiguration)
     SERVICES: Dict[TrainingServiceType, TrainingServiceConfig] = {
         TrainingServiceType.NHITS: TrainingServiceConfig(
             name="NHITS Training",
             service_type=TrainingServiceType.NHITS,
-            url=os.getenv("NHITS_TRAIN_URL", "http://trading-nhits-train:3012"),
-            port=3012,
+            url=os.getenv("NHITS_TRAIN_URL", microservices_config.nhits_train_url),
+            port=microservices_config.nhits_train_port,
             default_priority=JobPriority.NORMAL
         ),
         TrainingServiceType.TCN: TrainingServiceConfig(
             name="TCN Training",
             service_type=TrainingServiceType.TCN,
-            url=os.getenv("TCN_TRAIN_URL", "http://trading-tcn-train:3013"),
-            port=3013,
+            url=os.getenv("TCN_TRAIN_URL", microservices_config.tcn_train_url),
+            port=microservices_config.tcn_train_port,
             default_priority=JobPriority.NORMAL
         ),
         TrainingServiceType.HMM: TrainingServiceConfig(
             name="HMM Training",
             service_type=TrainingServiceType.HMM,
-            url=os.getenv("HMM_TRAIN_URL", "http://trading-hmm-train:3014"),
-            port=3014,
+            url=os.getenv("HMM_TRAIN_URL", microservices_config.hmm_train_url),
+            port=microservices_config.hmm_train_port,
             default_priority=JobPriority.LOW
         ),
         TrainingServiceType.CANDLESTICK: TrainingServiceConfig(
             name="Candlestick Training",
             service_type=TrainingServiceType.CANDLESTICK,
-            url=os.getenv("CANDLESTICK_TRAIN_URL", "http://trading-candlestick-train:3016"),
-            port=3016,
+            url=os.getenv("CANDLESTICK_TRAIN_URL", microservices_config.candlestick_train_url),
+            port=microservices_config.candlestick_train_port,
             default_priority=JobPriority.LOW
         ),
         TrainingServiceType.CNN_LSTM: TrainingServiceConfig(
             name="CNN-LSTM Training",
             service_type=TrainingServiceType.CNN_LSTM,
-            url=os.getenv("CNN_LSTM_TRAIN_URL", "http://trading-cnn-lstm-train:3017"),
-            port=3017,
+            url=os.getenv("CNN_LSTM_TRAIN_URL", microservices_config.cnn_lstm_train_url),
+            port=microservices_config.cnn_lstm_train_port,
             default_priority=JobPriority.LOW
         ),
     }

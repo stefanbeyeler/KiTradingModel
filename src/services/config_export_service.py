@@ -10,9 +10,10 @@ from loguru import logger
 import httpx
 
 from ..config import settings
+from src.config.microservices import microservices_config
 
 # Workplace Service URL for strategy management
-WORKPLACE_URL = os.getenv("WORKPLACE_SERVICE_URL", "http://trading-workplace:3020")
+WORKPLACE_URL = os.getenv("WORKPLACE_SERVICE_URL", microservices_config.workplace_service_url)
 
 
 class ConfigExportMetadata(BaseModel):

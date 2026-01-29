@@ -20,6 +20,7 @@ from typing import Optional
 import httpx
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from ..models.schemas import (
     CandleData,
     DetectedPattern,
@@ -60,7 +61,7 @@ def to_twelvedata(timeframe: str) -> str:
 
 
 # Data Service URL
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
 
 class CandlestickPatternService:

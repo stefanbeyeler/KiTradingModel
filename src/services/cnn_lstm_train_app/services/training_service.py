@@ -15,6 +15,7 @@ from typing import Optional
 import numpy as np
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from ..models.training_schemas import (
     TrainingConfig,
     TrainingMetrics,
@@ -88,7 +89,7 @@ def _cleanup_gpu_memory():
 # =============================================================================
 
 MODEL_DIR = os.getenv("MODEL_DIR", "/app/data/models/cnn-lstm")
-CNN_LSTM_SERVICE_URL = os.getenv("CNN_LSTM_SERVICE_URL", "http://trading-cnn-lstm:3007")
+CNN_LSTM_SERVICE_URL = os.getenv("CNN_LSTM_SERVICE_URL", microservices_config.cnn_lstm_service_url)
 HISTORY_FILE = "training_history.json"
 MAX_HISTORY_ITEMS = 50
 

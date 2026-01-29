@@ -15,6 +15,8 @@ from enum import Enum
 import httpx
 from loguru import logger
 
+from src.config.microservices import microservices_config
+
 # Try to import PyTorch (may not be available in all environments)
 try:
     import torch
@@ -60,8 +62,8 @@ class TrainingJob:
 
 
 # Data Service URL
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
-CANDLESTICK_SERVICE_URL = os.getenv("CANDLESTICK_SERVICE_URL", "http://trading-candlestick:3006")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
+CANDLESTICK_SERVICE_URL = os.getenv("CANDLESTICK_SERVICE_URL", microservices_config.candlestick_service_url)
 MODEL_DIR = os.getenv("MODEL_DIR", "/app/models")
 
 # Shared data directory (mounted from candlestick service)

@@ -10,6 +10,8 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional
 
+from src.config.microservices import microservices_config
+
 
 class EmbedderSettings(BaseSettings):
     """Konfiguration für den Embedder Service."""
@@ -71,7 +73,7 @@ class EmbedderSettings(BaseSettings):
 
     # Dependencies
     data_service_url: str = Field(
-        default="http://trading-data:3001",
+        default_factory=lambda: microservices_config.data_service_url,
         alias="DATA_SERVICE_URL"
     )
 

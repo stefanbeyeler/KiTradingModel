@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from loguru import logger
 
 from ..config import settings
+from src.config.microservices import microservices_config
 from ..config.timeframes import (
     Timeframe,
     normalize_timeframe,
@@ -163,7 +164,7 @@ async def get_favorites_from_data_service() -> dict:
     """
     import httpx
 
-    data_service_url = getattr(settings, 'data_service_url', 'http://localhost:3001')
+    data_service_url = getattr(settings, 'data_service_url', microservices_config.data_service_url)
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(f"{data_service_url}/api/v1/managed-symbols")
@@ -2948,7 +2949,7 @@ async def get_training_cache_stats():
     import httpx
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get("http://trading-data:3001/api/v1/training-data/cache/stats")
+            response = await client.get("f"{microservices_config.data_service_url}/api/v1/training-data/cache/stats"")
             return response.json()
     except Exception as e:
         logger.error(f"Failed to get cache stats from Data-Service: {e}")
@@ -2963,7 +2964,7 @@ async def get_cached_symbols():
     import httpx
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get("http://trading-data:3001/api/v1/training-data/cache/symbols")
+            response = await client.get("f"{microservices_config.data_service_url}/api/v1/training-data/cache/symbols"")
             return response.json()
     except Exception as e:
         logger.error(f"Failed to get cached symbols from Data-Service: {e}")
@@ -2978,7 +2979,7 @@ async def clear_training_cache():
     import httpx
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.delete("http://trading-data:3001/api/v1/training-data/cache")
+            response = await client.delete("f"{microservices_config.data_service_url}/api/v1/training-data/cache")
             return response.json()
     except Exception as e:
         logger.error(f"Failed to clear cache via Data-Service: {e}")
@@ -2993,7 +2994,7 @@ async def cleanup_expired_cache():
     import httpx
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.delete("http://trading-data:3001/api/v1/training-data/cache/expired")
+            response = await client.delete("f"{microservices_config.data_service_url}/api/v1/training-data/cache/expired"")
             return response.json()
     except Exception as e:
         logger.error(f"Failed to cleanup expired cache via Data-Service: {e}")

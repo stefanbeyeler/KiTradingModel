@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from .model_registry import ModelRegistry, ModelVersion, ModelStatus, model_registry
 from .validation_service import ValidationService, validation_service
 from .ab_comparison_service import (
@@ -55,8 +56,8 @@ class DeploymentDecision:
 
 
 # Service URLs
-HMM_SERVICE_URL = os.getenv("HMM_SERVICE_URL", "http://trading-hmm:3004")
-WATCHDOG_URL = os.getenv("WATCHDOG_URL", "http://trading-watchdog:3010")
+HMM_SERVICE_URL = os.getenv("HMM_SERVICE_URL", microservices_config.hmm_service_url)
+WATCHDOG_URL = os.getenv("WATCHDOG_URL", microservices_config.watchdog_service_url)
 DECISION_HISTORY_FILE = os.getenv(
     "DECISION_HISTORY_FILE",
     "/app/data/models/hmm/deployment_decisions.json"

@@ -11,6 +11,8 @@ from enum import Enum
 import numpy as np
 from loguru import logger
 
+from src.config.microservices import microservices_config
+
 # Lazy imports for PyTorch
 torch = None
 
@@ -91,7 +93,7 @@ class TCNTrainingService:
         # TCN inference service URL for notification
         self._tcn_service_url = os.getenv(
             "TCN_SERVICE_URL",
-            "http://trading-tcn:3003"
+            microservices_config.tcn_service_url
         )
 
         # Ensure model directory exists

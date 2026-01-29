@@ -10,6 +10,9 @@ from typing import Any, Callable, Awaitable, Dict, List, Optional
 
 import httpx
 
+# Import zentrale Microservices-Konfiguration
+from src.config.microservices import microservices_config
+
 
 class TestCategory(str, Enum):
     """Test-Kategorien."""
@@ -51,21 +54,21 @@ class TestDefinition:
 
 
 class ServiceURLs:
-    """Service-URLs für Docker-Umgebung."""
+    """Service-URLs für Docker-Umgebung (aus zentraler Konfiguration)."""
 
-    FRONTEND = "http://trading-frontend:80"
-    DATA = "http://trading-data:3001"
-    NHITS = "http://trading-nhits:3002"
-    TCN = "http://trading-tcn:3003"
-    TCN_TRAIN = "http://trading-tcn-train:3013"
-    HMM = "http://trading-hmm:3004"
-    EMBEDDER = "http://trading-embedder:3005"
-    CANDLESTICK = "http://trading-candlestick:3006"
-    CANDLESTICK_TRAIN = "http://trading-candlestick-train:3016"
-    RAG = "http://trading-rag:3008"
-    LLM = "http://trading-llm:3009"
-    WATCHDOG = "http://localhost:3010"
-    EASYINSIGHT = "http://10.1.19.102:3000"
+    FRONTEND = microservices_config.get_service_url("frontend")
+    DATA = microservices_config.data_service_url
+    NHITS = microservices_config.nhits_service_url
+    TCN = microservices_config.tcn_service_url
+    TCN_TRAIN = microservices_config.tcn_train_url
+    HMM = microservices_config.hmm_service_url
+    EMBEDDER = microservices_config.embedder_service_url
+    CANDLESTICK = microservices_config.candlestick_service_url
+    CANDLESTICK_TRAIN = microservices_config.candlestick_train_url
+    RAG = microservices_config.rag_service_url
+    LLM = microservices_config.llm_service_url
+    WATCHDOG = microservices_config.watchdog_service_url
+    EASYINSIGHT = microservices_config.easyinsight_api_url.replace("/api", "")
 
 
 # ============ Schema Validators ============

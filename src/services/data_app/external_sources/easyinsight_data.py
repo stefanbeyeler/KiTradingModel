@@ -10,9 +10,11 @@ from .base import DataSourceBase, DataSourceResult, DataSourceType, DataPriority
 # Import settings for EasyInsight API URL
 try:
     from src.config import settings
+    from src.config.microservices import microservices_config
     EASYINSIGHT_API_URL = settings.easyinsight_api_url
 except ImportError:
-    EASYINSIGHT_API_URL = "http://10.1.19.102:3000/api"
+    from src.config.microservices import microservices_config
+    EASYINSIGHT_API_URL = microservices_config.easyinsight_api_url
 
 
 class EasyInsightDataSource(DataSourceBase):
@@ -32,7 +34,7 @@ class EasyInsightDataSource(DataSourceBase):
         super().__init__()
         # Use EasyInsight API URL for logs, Data Service URL for managed symbols
         self._easyinsight_api_url = api_base_url or EASYINSIGHT_API_URL
-        self._data_service_url = "http://trading-data:3001"
+        self._data_service_url = microservices_config.data_service_url
         self._cache_ttl = 300  # 5 minutes
 
     async def fetch(

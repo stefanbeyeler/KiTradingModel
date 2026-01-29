@@ -12,8 +12,11 @@ from loguru import logger
 from ..config import WatchdogSettings
 from ..models.service_status import HealthState, ServiceStatus
 
+# Import zentrale Microservices-Konfiguration
+from src.config.microservices import microservices_config
+
 # Data Service URL für externe Service-Checks (Gateway-Pattern)
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
 # GPU-basierte Services die erweiterte Health-Checks benötigen
 GPU_SERVICES = {"nhits", "tcn", "embedder", "cnn-lstm", "rag", "llm"}
@@ -97,29 +100,29 @@ class HealthChecker:
         self._running = False
 
     def _init_services(self) -> Dict[str, dict]:
-        """Service-Registry mit Konfiguration."""
+        """Service-Registry mit Konfiguration (URLs aus zentraler Microservices-Config)."""
         return {
             "frontend": {
-                "url": "http://trading-frontend:80/health",
+                "url": f"{microservices_config.get_service_url('frontend')}/health",
                 "criticality": "medium",
                 "startup_grace": 10,
                 "dependencies": []
             },
             "data": {
-                "url": "http://trading-data:3001/health",
+                "url": f"{microservices_config.data_service_url}/health",
                 "criticality": "critical",
                 "startup_grace": 20,
                 "dependencies": []
             },
             "nhits": {
-                "url": "http://trading-nhits:3002/health",
+                "url": f"{microservices_config.nhits_service_url}/health",
                 "criticality": "high",
                 "startup_grace": 40,
                 "dependencies": ["data"],
                 "gpu_service": True
             },
             "tcn": {
-                "url": "http://trading-tcn:3003/health",
+                "url": f"{microservices_config.tcn_service_url}/health",
                 "criticality": "high",
                 "startup_grace": 150,  # Erhöht: TCN hängt von Embedder ab (120s)
                 "dependencies": ["data", "embedder"],
@@ -127,25 +130,25 @@ class HealthChecker:
                 "gpu_service": True
             },
             "hmm": {
-                "url": "http://trading-hmm:3004/health",
+                "url": f"{microservices_config.hmm_service_url}/health",
                 "criticality": "high",
                 "startup_grace": 30,
                 "dependencies": ["data"]
             },
             "embedder": {
-                "url": "http://trading-embedder:3005/health",
+                "url": f"{microservices_config.embedder_service_url}/health",
                 "criticality": "high",
                 "startup_grace": 120,
                 "dependencies": ["data"]
             },
             "candlestick": {
-                "url": "http://trading-candlestick:3006/health",
+                "url": f"{microservices_config.candlestick_service_url}/health",
                 "criticality": "high",
                 "startup_grace": 30,
                 "dependencies": ["data"]
             },
             "cnn-lstm": {
-                "url": "http://trading-cnn-lstm:3007/health",
+                "url": f"{microservices_config.cnn_lstm_service_url}/health",
                 "criticality": "high",
                 "startup_grace": 40,
                 "dependencies": ["data"],
@@ -160,56 +163,56 @@ class HealthChecker:
                 "check_type": "tcp"
             },
             "nhits-train": {
-                "url": "http://trading-nhits-train:3012/health",
+                "url": f"{microservices_config.nhits_train_url}/health",
                 "criticality": "medium",
                 "startup_grace": 60,
                 "dependencies": ["data"]
             },
             "tcn-train": {
-                "url": "http://trading-tcn-train:3013/health",
+                "url": f"{microservices_config.tcn_train_url}/health",
                 "criticality": "medium",
                 "startup_grace": 60,
                 "dependencies": ["data", "embedder"]
             },
             "hmm-train": {
-                "url": "http://trading-hmm-train:3014/health",
+                "url": f"{microservices_config.hmm_train_url}/health",
                 "criticality": "medium",
                 "startup_grace": 60,
                 "dependencies": ["data"]
             },
             "candlestick-train": {
-                "url": "http://trading-candlestick-train:3016/health",
+                "url": f"{microservices_config.candlestick_train_url}/health",
                 "criticality": "medium",
                 "startup_grace": 60,
                 "dependencies": ["data"]
             },
             "cnn-lstm-train": {
-                "url": "http://trading-cnn-lstm-train:3017/health",
+                "url": f"{microservices_config.cnn_lstm_train_url}/health",
                 "criticality": "medium",
                 "startup_grace": 60,
                 "dependencies": ["data"]
             },
             "rag": {
-                "url": "http://trading-rag:3008/health",
+                "url": f"{microservices_config.rag_service_url}/health",
                 "criticality": "high",
                 "startup_grace": 60,
                 "dependencies": ["data"]
             },
             "llm": {
-                "url": "http://trading-llm:3009/health",
+                "url": f"{microservices_config.llm_service_url}/health",
                 "criticality": "medium",
                 "startup_grace": 60,
                 "dependencies": ["rag"]
             },
             "workplace": {
-                "url": "http://trading-workplace:3020/health",
+                "url": f"{microservices_config.workplace_service_url}/health",
                 "criticality": "medium",
                 "startup_grace": 30,
                 "dependencies": ["data", "nhits", "hmm", "candlestick"]
             },
             # Externe Datenquellen werden über den Data Service abgefragt (Gateway-Pattern)
             "easyinsight": {
-                "url": "http://10.1.19.102:3000/api/components/status",
+                "url": f"{microservices_config.easyinsight_api_url.replace('/api', '')}/api/components/status",
                 "criticality": "critical",
                 "startup_grace": 10,
                 "dependencies": [],

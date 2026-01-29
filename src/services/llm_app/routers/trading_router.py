@@ -8,12 +8,13 @@ from loguru import logger
 import httpx
 
 from src.config import settings
+from src.config.microservices import microservices_config
 
 trading_router = APIRouter()
 
-# Service URLs
-RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://trading-rag:3008")
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+# Service URLs (aus zentraler Konfiguration)
+RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", microservices_config.rag_service_url)
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
 # Global LLM service reference (set via llm_router.set_llm_service)
 _llm_service = None
@@ -91,7 +92,7 @@ async def analyze_symbol(request: AnalysisRequest):
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     # NHITS forecast
                     try:
-                        nhits_url = os.getenv("NHITS_SERVICE_URL", "http://trading-nhits:3002")
+                        nhits_url = os.getenv("NHITS_SERVICE_URL", microservices_config.nhits_service_url)
                         response = await client.get(
                             f"{nhits_url}/api/v1/forecast/{request.symbol}",
                             params={"timeframe": request.timeframe}
@@ -103,7 +104,7 @@ async def analyze_symbol(request: AnalysisRequest):
 
                     # HMM regime
                     try:
-                        hmm_url = os.getenv("HMM_SERVICE_URL", "http://trading-hmm:3004")
+                        hmm_url = os.getenv("HMM_SERVICE_URL", microservices_config.hmm_service_url)
                         response = await client.get(
                             f"{hmm_url}/api/v1/regime/{request.symbol}",
                             params={"timeframe": request.timeframe}

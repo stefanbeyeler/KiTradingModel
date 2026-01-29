@@ -2,19 +2,22 @@
 
 from pydantic_settings import BaseSettings
 
+# Import zentrale Microservices-Konfiguration
+from src.config.microservices import microservices_config
+
 
 class WatchdogSettings(BaseSettings):
     """Konfiguration für den Watchdog Service."""
 
     # Service-Konfiguration
-    watchdog_port: int = 3010
+    watchdog_port: int = microservices_config.watchdog_service_port
     check_interval_seconds: int = 30
     timeout_seconds: int = 10
     max_retries: int = 3
 
     # Data Service Konfiguration (für Service Runs API)
     data_host: str = "trading-data"
-    data_port: int = 3001
+    data_port: int = microservices_config.data_service_port
 
     # Telegram Konfiguration
     telegram_enabled: bool = True
@@ -47,7 +50,7 @@ class WatchdogSettings(BaseSettings):
     max_concurrent_training: int = 2  # Max gleichzeitige Training-Jobs
 
     # GPU Monitoring via Remote Service (wenn kein lokaler GPU-Zugang)
-    gpu_metrics_service_url: str = "http://trading-cnn-lstm:3007"  # Service mit GPU-Zugang
+    gpu_metrics_service_url: str = microservices_config.cnn_lstm_service_url  # Service mit GPU-Zugang
     gpu_metrics_timeout: float = 5.0  # Timeout für GPU-Metriken-Abfrage
 
     model_config = {

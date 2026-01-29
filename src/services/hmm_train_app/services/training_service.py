@@ -31,6 +31,8 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
+from src.config.microservices import microservices_config
+
 # Lazy imports for ML libraries
 hmmlearn_hmm = None
 lightgbm = None
@@ -129,8 +131,8 @@ class TrainingJob:
 
 
 # Service URLs
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
-HMM_SERVICE_URL = os.getenv("HMM_SERVICE_URL", "http://trading-hmm:3004")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
+HMM_SERVICE_URL = os.getenv("HMM_SERVICE_URL", microservices_config.hmm_service_url)
 MODEL_DIR = os.getenv("MODEL_DIR", "/app/data/models/hmm")
 
 # Validation settings

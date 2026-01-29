@@ -19,6 +19,7 @@ from pathlib import Path
 import httpx
 from loguru import logger
 
+from src.config.microservices import microservices_config
 
 DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 
@@ -86,7 +87,7 @@ class AutoRetrainService:
         )
 
         # Service URLs
-        self._train_service_url = os.getenv("CNN_LSTM_TRAIN_SERVICE_URL", "http://trading-cnn-lstm-train:3017")
+        self._train_service_url = os.getenv("CNN_LSTM_TRAIN_SERVICE_URL", microservices_config.cnn_lstm_train_url)
 
         # State
         self._last_retrain: Optional[datetime] = None

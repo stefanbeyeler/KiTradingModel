@@ -18,6 +18,8 @@ from datetime import datetime
 from enum import Enum
 from loguru import logger
 
+from src.config.microservices import microservices_config
+
 
 class DeploymentStatus(str, Enum):
     """Status of a model deployment."""
@@ -94,7 +96,7 @@ class TCNRollbackService:
         self._current_version: Optional[str] = None
         self._tcn_service_url = os.getenv(
             "TCN_SERVICE_URL",
-            "http://trading-tcn:3003"
+            microservices_config.tcn_service_url
         )
 
         # Ensure directories exist

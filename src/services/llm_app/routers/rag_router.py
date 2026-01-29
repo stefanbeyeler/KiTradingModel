@@ -10,10 +10,12 @@ from fastapi import APIRouter, HTTPException
 from loguru import logger
 import httpx
 
+from src.config.microservices import microservices_config
+
 rag_router = APIRouter()
 
-# RAG Service URL (accessed via HTTP, not direct import)
-RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://trading-rag:3008")
+# RAG Service URL (aus zentraler Konfiguration)
+RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", microservices_config.rag_service_url)
 
 
 async def _call_rag_service(method: str, endpoint: str, params: dict = None, json: dict = None):

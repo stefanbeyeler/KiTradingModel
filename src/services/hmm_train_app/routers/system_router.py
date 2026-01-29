@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from ..services.training_service import training_service
 
 router = APIRouter(tags=["System"])
@@ -31,8 +32,8 @@ async def get_config():
 
     return {
         "model_directory": os.getenv("MODEL_DIR", "/app/data/models/hmm"),
-        "data_service_url": os.getenv("DATA_SERVICE_URL", "http://trading-data:3001"),
-        "hmm_service_url": os.getenv("HMM_SERVICE_URL", "http://trading-hmm:3004"),
+        "data_service_url": os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url),
+        "hmm_service_url": os.getenv("HMM_SERVICE_URL", microservices_config.hmm_service_url),
         "default_timeframe": "1h",
         "default_lookback_days": 365,
         "hmm_n_components": 4,

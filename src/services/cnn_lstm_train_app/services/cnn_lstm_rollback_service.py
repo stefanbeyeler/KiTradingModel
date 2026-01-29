@@ -18,6 +18,8 @@ from datetime import datetime
 from enum import Enum
 from loguru import logger
 
+from src.config.microservices import microservices_config
+
 
 class DeploymentStatus(str, Enum):
     """Status of a model deployment."""
@@ -136,7 +138,7 @@ class CNNLSTMRollbackService:
         self._current_version: Optional[str] = None
         self._cnn_lstm_service_url = os.getenv(
             "CNN_LSTM_SERVICE_URL",
-            "http://trading-cnn-lstm:3007"
+            microservices_config.cnn_lstm_service_url
         )
 
         # Ensure directories exist

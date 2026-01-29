@@ -28,6 +28,8 @@ from pathlib import Path
 import numpy as np
 from loguru import logger
 
+from src.config.microservices import microservices_config
+
 # Lazy PyTorch import for container startup
 torch = None
 
@@ -86,8 +88,8 @@ class TrainingJob:
 
 
 # Service URLs
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
-NHITS_SERVICE_URL = os.getenv("NHITS_SERVICE_URL", "http://trading-nhits:3002")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
+NHITS_SERVICE_URL = os.getenv("NHITS_SERVICE_URL", microservices_config.nhits_service_url)
 MODEL_DIR = os.getenv("MODEL_DIR", "/app/data/models/nhits")
 
 

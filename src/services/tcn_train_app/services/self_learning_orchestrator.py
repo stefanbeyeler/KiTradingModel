@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from .training_service import training_service
 from .feedback_buffer_service import feedback_buffer_service
 from .ewc_trainer import EWCConfig
@@ -134,7 +135,7 @@ class SelfLearningOrchestrator:
         self._loop_task: Optional[asyncio.Task] = None
         self._tcn_service_url = os.getenv(
             "TCN_SERVICE_URL",
-            "http://trading-tcn:3003"
+            microservices_config.tcn_service_url
         )
         self._load_state()
 

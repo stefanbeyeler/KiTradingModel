@@ -21,8 +21,10 @@ class ServiceType(str, Enum):
     """Kategorisierung der Services."""
     GATEWAY = "gateway"      # Frontend, API Gateway
     DATA = "data"            # Datenzugriff und -verwaltung
-    ML = "ml"                # Machine Learning Services
+    ML = "ml"                # Machine Learning Inference Services
+    TRAINING = "training"    # Machine Learning Training Services
     ANALYSIS = "analysis"    # Analyse-Services
+    INFRASTRUCTURE = "infrastructure"  # Monitoring, Orchestration
 
 
 class ServiceConfig(BaseSettings):
@@ -65,14 +67,32 @@ class MicroservicesConfig(BaseSettings):
     # Service Ports (aus Umgebungsvariablen oder Defaults)
     # =========================================================
 
+    # Gateway & Data
     frontend_port: int = Field(default=3000, alias="FRONTEND_PORT")
     data_service_port: int = Field(default=3001, alias="DATA_SERVICE_PORT")
+
+    # ML Inference Services
     nhits_service_port: int = Field(default=3002, alias="NHITS_SERVICE_PORT")
     tcn_service_port: int = Field(default=3003, alias="TCN_SERVICE_PORT")
     hmm_service_port: int = Field(default=3004, alias="HMM_SERVICE_PORT")
     embedder_service_port: int = Field(default=3005, alias="EMBEDDER_SERVICE_PORT")
+    candlestick_service_port: int = Field(default=3006, alias="CANDLESTICK_SERVICE_PORT")
+    cnn_lstm_service_port: int = Field(default=3007, alias="CNN_LSTM_SERVICE_PORT")
+
+    # Analysis Services
     rag_service_port: int = Field(default=3008, alias="RAG_SERVICE_PORT")
     llm_service_port: int = Field(default=3009, alias="LLM_SERVICE_PORT")
+
+    # Infrastructure Services
+    watchdog_service_port: int = Field(default=3010, alias="WATCHDOG_SERVICE_PORT")
+    workplace_service_port: int = Field(default=3020, alias="WORKPLACE_SERVICE_PORT")
+
+    # Training Services
+    nhits_train_port: int = Field(default=3012, alias="NHITS_TRAIN_PORT")
+    tcn_train_port: int = Field(default=3013, alias="TCN_TRAIN_PORT")
+    hmm_train_port: int = Field(default=3014, alias="HMM_TRAIN_PORT")
+    candlestick_train_port: int = Field(default=3016, alias="CANDLESTICK_TRAIN_PORT")
+    cnn_lstm_train_port: int = Field(default=3017, alias="CNN_LSTM_TRAIN_PORT")
 
     # =========================================================
     # Host Configuration
@@ -217,6 +237,126 @@ class MicroservicesConfig(BaseSettings):
                 "health_start_period": 60,
                 "depends_on": ["rag-service"],
             },
+            "candlestick": {
+                "name": "candlestick",
+                "display_name": "Candlestick Service",
+                "description": "Candlestick Pattern Erkennung",
+                "port": self.candlestick_service_port,
+                "service_type": ServiceType.ML,
+                "container_name": "trading-candlestick",
+                "requires_gpu": False,
+                "memory_limit": "4G",
+                "health_endpoint": "/health",
+                "health_start_period": 30,
+                "model_load_timeout": 60,
+                "depends_on": ["data-service"],
+            },
+            "cnn-lstm": {
+                "name": "cnn-lstm",
+                "display_name": "CNN-LSTM Service",
+                "description": "Multi-Task Predictions (Preis, Patterns, Regime)",
+                "port": self.cnn_lstm_service_port,
+                "service_type": ServiceType.ML,
+                "container_name": "trading-cnn-lstm",
+                "requires_gpu": False,
+                "memory_limit": "8G",
+                "health_endpoint": "/health",
+                "health_start_period": 40,
+                "model_load_timeout": 120,
+                "depends_on": ["data-service"],
+            },
+            "watchdog": {
+                "name": "watchdog",
+                "display_name": "Watchdog Service",
+                "description": "Monitoring, Health-Checks, Training Orchestrator",
+                "port": self.watchdog_service_port,
+                "service_type": ServiceType.INFRASTRUCTURE,
+                "container_name": "trading-watchdog",
+                "requires_gpu": False,
+                "memory_limit": "2G",
+                "health_endpoint": "/health",
+                "health_start_period": 20,
+                "depends_on": ["data-service"],
+            },
+            "workplace": {
+                "name": "workplace",
+                "display_name": "Trading Workplace",
+                "description": "Setup-Aggregation, Multi-Signal-Scoring",
+                "port": self.workplace_service_port,
+                "service_type": ServiceType.ANALYSIS,
+                "container_name": "trading-workplace",
+                "requires_gpu": False,
+                "memory_limit": "4G",
+                "health_endpoint": "/health",
+                "health_start_period": 30,
+                "depends_on": ["data-service", "nhits-service", "hmm-service"],
+            },
+            # Training Services
+            "nhits-train": {
+                "name": "nhits-train",
+                "display_name": "NHITS Training",
+                "description": "NHITS Model Training Service",
+                "port": self.nhits_train_port,
+                "service_type": ServiceType.TRAINING,
+                "container_name": "trading-nhits-train",
+                "requires_gpu": True,
+                "memory_limit": "16G",
+                "health_endpoint": "/health",
+                "health_start_period": 30,
+                "depends_on": ["data-service"],
+            },
+            "tcn-train": {
+                "name": "tcn-train",
+                "display_name": "TCN Training",
+                "description": "TCN Pattern Training Service",
+                "port": self.tcn_train_port,
+                "service_type": ServiceType.TRAINING,
+                "container_name": "trading-tcn-train",
+                "requires_gpu": True,
+                "memory_limit": "8G",
+                "health_endpoint": "/health",
+                "health_start_period": 30,
+                "depends_on": ["data-service"],
+            },
+            "hmm-train": {
+                "name": "hmm-train",
+                "display_name": "HMM Training",
+                "description": "HMM + LightGBM Training Service",
+                "port": self.hmm_train_port,
+                "service_type": ServiceType.TRAINING,
+                "container_name": "trading-hmm-train",
+                "requires_gpu": False,
+                "memory_limit": "4G",
+                "health_endpoint": "/health",
+                "health_start_period": 30,
+                "depends_on": ["data-service"],
+            },
+            "candlestick-train": {
+                "name": "candlestick-train",
+                "display_name": "Candlestick Training",
+                "description": "Candlestick Pattern Training Service",
+                "port": self.candlestick_train_port,
+                "service_type": ServiceType.TRAINING,
+                "container_name": "trading-candlestick-train",
+                "requires_gpu": False,
+                "memory_limit": "4G",
+                "health_endpoint": "/health",
+                "health_start_period": 30,
+                "depends_on": ["data-service"],
+            },
+            "cnn-lstm-train": {
+                "name": "cnn-lstm-train",
+                "display_name": "CNN-LSTM Training",
+                "description": "CNN-LSTM Multi-Task Training Service",
+                "port": self.cnn_lstm_train_port,
+                "service_type": ServiceType.TRAINING,
+                "container_name": "trading-cnn-lstm-train",
+                "requires_gpu": False,
+                "memory_limit": "8G",
+                "health_endpoint": "/health",
+                "health_start_period": 30,
+                "depends_on": ["data-service"],
+            },
         }
 
     # =========================================================
@@ -245,11 +385,33 @@ class MicroservicesConfig(BaseSettings):
 
         return f"http://{host}:{service['port']}"
 
+    # =========================================================
+    # Inference Service URLs
+    # =========================================================
+
     @computed_field
     @property
     def data_service_url(self) -> str:
         """URL des Data Service (für Docker-Netzwerk)."""
         return self.get_service_url("data")
+
+    @computed_field
+    @property
+    def nhits_service_url(self) -> str:
+        """URL des NHITS Service (für Docker-Netzwerk)."""
+        return self.get_service_url("nhits")
+
+    @computed_field
+    @property
+    def tcn_service_url(self) -> str:
+        """URL des TCN Service (für Docker-Netzwerk)."""
+        return self.get_service_url("tcn")
+
+    @computed_field
+    @property
+    def hmm_service_url(self) -> str:
+        """URL des HMM Service (für Docker-Netzwerk)."""
+        return self.get_service_url("hmm")
 
     @computed_field
     @property
@@ -259,15 +421,81 @@ class MicroservicesConfig(BaseSettings):
 
     @computed_field
     @property
+    def candlestick_service_url(self) -> str:
+        """URL des Candlestick Service (für Docker-Netzwerk)."""
+        return self.get_service_url("candlestick")
+
+    @computed_field
+    @property
+    def cnn_lstm_service_url(self) -> str:
+        """URL des CNN-LSTM Service (für Docker-Netzwerk)."""
+        return self.get_service_url("cnn-lstm")
+
+    @computed_field
+    @property
     def rag_service_url(self) -> str:
         """URL des RAG Service (für Docker-Netzwerk)."""
         return self.get_service_url("rag")
 
     @computed_field
     @property
-    def nhits_service_url(self) -> str:
-        """URL des NHITS Service (für Docker-Netzwerk)."""
-        return self.get_service_url("nhits")
+    def llm_service_url(self) -> str:
+        """URL des LLM Service (für Docker-Netzwerk)."""
+        return self.get_service_url("llm")
+
+    # =========================================================
+    # Infrastructure Service URLs
+    # =========================================================
+
+    @computed_field
+    @property
+    def watchdog_service_url(self) -> str:
+        """URL des Watchdog Service (für Docker-Netzwerk)."""
+        return self.get_service_url("watchdog")
+
+    @computed_field
+    @property
+    def workplace_service_url(self) -> str:
+        """URL des Workplace Service (für Docker-Netzwerk)."""
+        return self.get_service_url("workplace")
+
+    # =========================================================
+    # Training Service URLs
+    # =========================================================
+
+    @computed_field
+    @property
+    def nhits_train_url(self) -> str:
+        """URL des NHITS Training Service."""
+        return self.get_service_url("nhits-train")
+
+    @computed_field
+    @property
+    def tcn_train_url(self) -> str:
+        """URL des TCN Training Service."""
+        return self.get_service_url("tcn-train")
+
+    @computed_field
+    @property
+    def hmm_train_url(self) -> str:
+        """URL des HMM Training Service."""
+        return self.get_service_url("hmm-train")
+
+    @computed_field
+    @property
+    def candlestick_train_url(self) -> str:
+        """URL des Candlestick Training Service."""
+        return self.get_service_url("candlestick-train")
+
+    @computed_field
+    @property
+    def cnn_lstm_train_url(self) -> str:
+        """URL des CNN-LSTM Training Service."""
+        return self.get_service_url("cnn-lstm-train")
+
+    # =========================================================
+    # External Service URLs
+    # =========================================================
 
     @computed_field
     @property
@@ -291,14 +519,46 @@ class MicroservicesConfig(BaseSettings):
         Kann für docker-compose verwendet werden.
         """
         return {
+            # Gateway & Data
             "FRONTEND_PORT": str(self.frontend_port),
             "DATA_SERVICE_PORT": str(self.data_service_port),
+            # Inference Services
             "NHITS_SERVICE_PORT": str(self.nhits_service_port),
-            "RAG_SERVICE_PORT": str(self.rag_service_port),
-            "LLM_SERVICE_PORT": str(self.llm_service_port),
             "TCN_SERVICE_PORT": str(self.tcn_service_port),
             "HMM_SERVICE_PORT": str(self.hmm_service_port),
             "EMBEDDER_SERVICE_PORT": str(self.embedder_service_port),
+            "CANDLESTICK_SERVICE_PORT": str(self.candlestick_service_port),
+            "CNN_LSTM_SERVICE_PORT": str(self.cnn_lstm_service_port),
+            "RAG_SERVICE_PORT": str(self.rag_service_port),
+            "LLM_SERVICE_PORT": str(self.llm_service_port),
+            # Infrastructure Services
+            "WATCHDOG_SERVICE_PORT": str(self.watchdog_service_port),
+            "WORKPLACE_SERVICE_PORT": str(self.workplace_service_port),
+            # Training Services
+            "NHITS_TRAIN_PORT": str(self.nhits_train_port),
+            "TCN_TRAIN_PORT": str(self.tcn_train_port),
+            "HMM_TRAIN_PORT": str(self.hmm_train_port),
+            "CANDLESTICK_TRAIN_PORT": str(self.candlestick_train_port),
+            "CNN_LSTM_TRAIN_PORT": str(self.cnn_lstm_train_port),
+            # Service URLs
+            "DATA_SERVICE_URL": self.data_service_url,
+            "NHITS_SERVICE_URL": self.nhits_service_url,
+            "TCN_SERVICE_URL": self.tcn_service_url,
+            "HMM_SERVICE_URL": self.hmm_service_url,
+            "EMBEDDER_SERVICE_URL": self.embedder_service_url,
+            "CANDLESTICK_SERVICE_URL": self.candlestick_service_url,
+            "CNN_LSTM_SERVICE_URL": self.cnn_lstm_service_url,
+            "RAG_SERVICE_URL": self.rag_service_url,
+            "LLM_SERVICE_URL": self.llm_service_url,
+            "WATCHDOG_SERVICE_URL": self.watchdog_service_url,
+            "WORKPLACE_SERVICE_URL": self.workplace_service_url,
+            # Training Service URLs
+            "NHITS_TRAIN_URL": self.nhits_train_url,
+            "TCN_TRAIN_URL": self.tcn_train_url,
+            "HMM_TRAIN_URL": self.hmm_train_url,
+            "CANDLESTICK_TRAIN_URL": self.candlestick_train_url,
+            "CNN_LSTM_TRAIN_URL": self.cnn_lstm_train_url,
+            # External Services
             "EASYINSIGHT_API_URL": self.easyinsight_api_url,
             "OLLAMA_HOST": self.ollama_url,
         }
@@ -306,14 +566,27 @@ class MicroservicesConfig(BaseSettings):
     def get_port_by_name(self, service_name: str) -> int:
         """Gibt den Port eines Services zurück."""
         port_map = {
+            # Gateway & Data
             "frontend": self.frontend_port,
             "data": self.data_service_port,
+            # Inference Services
             "nhits": self.nhits_service_port,
             "tcn": self.tcn_service_port,
             "hmm": self.hmm_service_port,
             "embedder": self.embedder_service_port,
+            "candlestick": self.candlestick_service_port,
+            "cnn-lstm": self.cnn_lstm_service_port,
             "rag": self.rag_service_port,
             "llm": self.llm_service_port,
+            # Infrastructure Services
+            "watchdog": self.watchdog_service_port,
+            "workplace": self.workplace_service_port,
+            # Training Services
+            "nhits-train": self.nhits_train_port,
+            "tcn-train": self.tcn_train_port,
+            "hmm-train": self.hmm_train_port,
+            "candlestick-train": self.candlestick_train_port,
+            "cnn-lstm-train": self.cnn_lstm_train_port,
         }
         return port_map.get(service_name, 3000)
 

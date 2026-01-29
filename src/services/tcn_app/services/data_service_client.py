@@ -12,6 +12,9 @@ from typing import Optional
 import httpx
 from loguru import logger
 
+# Import zentrale Microservices-Konfiguration
+from src.config.microservices import microservices_config
+
 
 class DataServiceClient:
     """
@@ -22,8 +25,8 @@ class DataServiceClient:
     """
 
     def __init__(self):
-        # Data Service URL - im Docker-Netzwerk erreichbar
-        self._base_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+        # Data Service URL - aus zentraler Konfiguration
+        self._base_url = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
         self._api_prefix = "/api/v1"
         self._http_client: Optional[httpx.AsyncClient] = None
         self._timeout = 30.0
@@ -190,7 +193,7 @@ class DataServiceClient:
         Returns:
             Regime detection result or None on error
         """
-        hmm_url = os.getenv("HMM_SERVICE_URL", "http://trading-hmm:3004")
+        hmm_url = os.getenv("HMM_SERVICE_URL", microservices_config.hmm_service_url)
 
         try:
             client = await self._get_client()
@@ -239,7 +242,7 @@ class DataServiceClient:
         Returns:
             Forecast result or None on error
         """
-        nhits_url = os.getenv("NHITS_SERVICE_URL", "http://trading-nhits:3002")
+        nhits_url = os.getenv("NHITS_SERVICE_URL", microservices_config.nhits_service_url)
 
         try:
             client = await self._get_client()
@@ -287,7 +290,7 @@ class DataServiceClient:
         Returns:
             Detected candlestick patterns or None on error
         """
-        candlestick_url = os.getenv("CANDLESTICK_SERVICE_URL", "http://trading-candlestick:3006")
+        candlestick_url = os.getenv("CANDLESTICK_SERVICE_URL", microservices_config.candlestick_service_url)
 
         try:
             client = await self._get_client()

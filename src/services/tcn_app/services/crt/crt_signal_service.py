@@ -18,6 +18,7 @@ from src.utils.session_utils import SessionType, get_session_for_h4_candle
 from .session_manager import SessionManager, session_manager
 from .range_tracker import RangeTracker, CRTRange, CRTState, range_tracker
 from .purge_detector import PurgeDetector, PurgeEvent, ReEntryEvent, purge_detector
+from src.config.microservices import microservices_config
 
 UTC_TZ = timezone.utc
 
@@ -98,10 +99,10 @@ class CRTSignalService:
     - TCN Service (3003): Pattern confluence
     """
 
-    # Service URLs
-    HMM_SERVICE_URL = "http://localhost:3004"
-    NHITS_SERVICE_URL = "http://localhost:3002"
-    TCN_SERVICE_URL = "http://localhost:3003"
+    # Service URLs (from central config)
+    HMM_SERVICE_URL = microservices_config.hmm_service_url
+    NHITS_SERVICE_URL = microservices_config.nhits_service_url
+    TCN_SERVICE_URL = microservices_config.tcn_service_url
 
     # Confidence weights
     WEIGHTS = {

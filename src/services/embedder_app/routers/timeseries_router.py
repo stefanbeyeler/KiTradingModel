@@ -15,6 +15,7 @@ from ..models.schemas import (
 )
 from ..services.embedding_service import embedding_service
 from ..config import settings
+from src.config.microservices import microservices_config
 
 router = APIRouter()
 
@@ -33,7 +34,7 @@ async def get_http_client() -> httpx.AsyncClient:
 async def fetch_ohlcv_from_data_service(symbol: str, timeframe: str, limit: int) -> list:
     """Fetch OHLCV data from Data Service via HTTP."""
     client = await get_http_client()
-    data_service_url = getattr(settings, 'data_service_url', 'http://trading-data:3001')
+    data_service_url = getattr(settings, 'data_service_url', microservices_config.data_service_url)
 
     url = f"{data_service_url}/api/v1/db/ohlcv/{symbol}"
     params = {"timeframe": timeframe, "limit": limit}

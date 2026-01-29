@@ -10,6 +10,7 @@ from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from ..services.pattern_history_service import pattern_history_service
 
 # Display timezone for date filtering (matches what users see in UI)
@@ -1105,7 +1106,7 @@ async def get_revalidation_statistics():
             import httpx
             # Query training service for completed jobs (port 3016 internally)
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get("http://trading-candlestick-train:3016/api/v1/train/jobs")
+                response = await client.get(f"{microservices_config.candlestick_train_url}/api/v1/train/jobs")
                 if response.status_code == 200:
                     jobs_data = response.json()
                     jobs = jobs_data.get("jobs", [])

@@ -11,11 +11,13 @@ from typing import Optional
 import numpy as np
 from loguru import logger
 
+from src.config.microservices import microservices_config
+
 # =============================================================================
 # Configuration
 # =============================================================================
 
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
 # Feature Definitionen (25 Features)
 FEATURE_NAMES = [

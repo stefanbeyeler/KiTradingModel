@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from loguru import logger
 
+from src.config.microservices import microservices_config
 
 DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 
@@ -128,10 +129,10 @@ class OutcomeTrackerService:
 
         # Service URLs
         self._data_service_url = os.getenv(
-            "DATA_SERVICE_URL", "http://trading-data:3001"
+            "DATA_SERVICE_URL", microservices_config.data_service_url
         )
         self._train_service_url = os.getenv(
-            "CNN_LSTM_TRAIN_SERVICE_URL", "http://trading-cnn-lstm-train:3017"
+            "CNN_LSTM_TRAIN_SERVICE_URL", microservices_config.cnn_lstm_train_url
         )
 
         self._load_outcomes()

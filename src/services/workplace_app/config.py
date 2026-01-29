@@ -9,6 +9,9 @@ from typing import Optional
 
 from pydantic_settings import BaseSettings
 
+# Import zentrale Microservices-Konfiguration
+from src.config.microservices import microservices_config
+
 
 class WorkplaceSettings(BaseSettings):
     """Trading Workplace Service Konfiguration."""
@@ -21,15 +24,15 @@ class WorkplaceSettings(BaseSettings):
     scan_interval_seconds: int = 60
     auto_scan_enabled: bool = True
 
-    # Signal-Quellen URLs (Docker-Container-Namen)
-    data_service_url: str = "http://trading-data:3001"
-    nhits_service_url: str = "http://trading-nhits:3002"
-    tcn_service_url: str = "http://trading-tcn:3003"
-    hmm_service_url: str = "http://trading-hmm:3004"
-    candlestick_service_url: str = "http://trading-candlestick:3006"
-    cnn_lstm_service_url: str = "http://trading-cnn-lstm:3007"
-    rag_service_url: str = "http://trading-rag:3008"
-    llm_service_url: str = "http://trading-llm:3009"
+    # Signal-Quellen URLs (aus zentraler Konfiguration, überschreibbar via Env)
+    data_service_url: str = microservices_config.data_service_url
+    nhits_service_url: str = microservices_config.nhits_service_url
+    tcn_service_url: str = microservices_config.tcn_service_url
+    hmm_service_url: str = microservices_config.hmm_service_url
+    candlestick_service_url: str = microservices_config.candlestick_service_url
+    cnn_lstm_service_url: str = microservices_config.cnn_lstm_service_url
+    rag_service_url: str = microservices_config.rag_service_url
+    llm_service_url: str = microservices_config.llm_service_url
 
     # HTTP-Client Timeouts
     http_timeout_seconds: float = 30.0

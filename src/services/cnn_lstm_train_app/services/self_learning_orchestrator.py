@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from .feedback_buffer_service import feedback_buffer_service
 from .cnn_lstm_validation_service import validation_service, ValidationRecommendation
 from .cnn_lstm_rollback_service import rollback_service, RollbackReason
@@ -114,7 +115,7 @@ class SelfLearningOrchestrator:
         # Service URLs
         self._cnn_lstm_service_url = os.getenv(
             "CNN_LSTM_SERVICE_URL",
-            "http://trading-cnn-lstm:3007"
+            microservices_config.cnn_lstm_service_url
         )
 
         # Load saved state

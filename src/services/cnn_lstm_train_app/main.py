@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from .routers import (
     training_router,
     system_router,
@@ -33,8 +34,8 @@ SERVICE_VERSION = "1.0.0"
 SERVICE_PORT = int(os.getenv("PORT", "3017"))
 ROOT_PATH = os.getenv("ROOT_PATH", "/cnn-lstm-train")
 MODEL_DIR = os.getenv("MODEL_DIR", "/app/data/models/cnn-lstm")
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
-CNN_LSTM_SERVICE_URL = os.getenv("CNN_LSTM_SERVICE_URL", "http://trading-cnn-lstm:3007")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
+CNN_LSTM_SERVICE_URL = os.getenv("CNN_LSTM_SERVICE_URL", microservices_config.cnn_lstm_service_url)
 
 # Global state
 _start_time: float = 0.0

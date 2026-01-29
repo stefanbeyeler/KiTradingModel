@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from ..services.training_service import training_service
 
 router = APIRouter(tags=["System"])
@@ -30,8 +31,8 @@ async def get_config():
 
     return {
         "model_directory": os.getenv("MODEL_DIR", "/app/data/models/nhits"),
-        "data_service_url": os.getenv("DATA_SERVICE_URL", "http://trading-data:3001"),
-        "nhits_service_url": os.getenv("NHITS_SERVICE_URL", "http://trading-nhits:3002"),
+        "data_service_url": os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url),
+        "nhits_service_url": os.getenv("NHITS_SERVICE_URL", microservices_config.nhits_service_url),
         "default_timeframes": ["H1", "D1"],
         "cpu_threads": {
             "omp": os.getenv("OMP_NUM_THREADS", "4"),

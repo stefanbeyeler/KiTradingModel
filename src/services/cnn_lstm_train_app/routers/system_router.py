@@ -11,6 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from ..models.training_schemas import ModelCleanupResponse
 
 router = APIRouter()
@@ -112,8 +113,8 @@ async def service_info():
             "history": "GET /api/v1/train/history"
         },
         "configuration": {
-            "data_service_url": os.getenv("DATA_SERVICE_URL", "http://trading-data:3001"),
-            "cnn_lstm_service_url": os.getenv("CNN_LSTM_SERVICE_URL", "http://trading-cnn-lstm:3007"),
+            "data_service_url": os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url),
+            "cnn_lstm_service_url": os.getenv("CNN_LSTM_SERVICE_URL", microservices_config.cnn_lstm_service_url),
             "nice_priority": os.getenv("NICE_PRIORITY", "19")
         }
     }
@@ -245,8 +246,8 @@ async def get_config():
         "port": int(os.getenv("PORT", "3017")),
         "root_path": os.getenv("ROOT_PATH", "/cnn-lstm-train"),
         "model_dir": MODEL_DIR,
-        "data_service_url": os.getenv("DATA_SERVICE_URL", "http://trading-data:3001"),
-        "cnn_lstm_service_url": os.getenv("CNN_LSTM_SERVICE_URL", "http://trading-cnn-lstm:3007"),
+        "data_service_url": os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url),
+        "cnn_lstm_service_url": os.getenv("CNN_LSTM_SERVICE_URL", microservices_config.cnn_lstm_service_url),
         "environment": {
             "NICE_PRIORITY": os.getenv("NICE_PRIORITY", "19"),
             "OMP_NUM_THREADS": os.getenv("OMP_NUM_THREADS", "not set"),

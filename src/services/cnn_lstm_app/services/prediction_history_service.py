@@ -15,6 +15,7 @@ from dataclasses import dataclass, asdict, field
 
 from loguru import logger
 
+from src.config.microservices import microservices_config
 
 # Data directory
 DATA_DIR = os.getenv("DATA_DIR", "/app/data")
@@ -263,8 +264,8 @@ class PredictionHistoryService:
             self._scan_new_predictions = 0
 
             new_predictions = 0
-            cnn_lstm_url = os.getenv("CNN_LSTM_SERVICE_URL", "http://trading-cnn-lstm:3007")
-            data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+            cnn_lstm_url = os.getenv("CNN_LSTM_SERVICE_URL", microservices_config.cnn_lstm_service_url)
+            data_service_url = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 for symbol in self._scan_symbols:

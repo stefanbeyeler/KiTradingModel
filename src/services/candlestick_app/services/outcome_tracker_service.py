@@ -16,6 +16,8 @@ from typing import Any, Callable, Dict, List, Optional
 from loguru import logger
 import httpx
 
+from src.config.microservices import microservices_config
+
 
 class OutcomeStatus(Enum):
     """Status of a tracked pattern outcome."""
@@ -126,10 +128,10 @@ class OutcomeTrackerService:
         self._callbacks: List[Callable] = []
 
         # Data service URL
-        self._data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+        self._data_service_url = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
         # Training service URL for feedback
-        self._train_service_url = os.getenv("CANDLESTICK_TRAIN_SERVICE_URL", "http://trading-candlestick-train:3016")
+        self._train_service_url = os.getenv("CANDLESTICK_TRAIN_SERVICE_URL", microservices_config.candlestick_train_url)
 
         # Load existing outcomes
         self._load_outcomes()

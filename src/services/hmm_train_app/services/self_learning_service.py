@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from loguru import logger
 import httpx
 
+from src.config.microservices import microservices_config
+
 
 @dataclass
 class SelfLearningStatus:
@@ -24,7 +26,7 @@ class SelfLearningStatus:
     last_accuracy: Optional[float] = None
     last_retrain_trigger: Optional[datetime] = None
     pending_retrain: bool = False
-    inference_service_url: str = "http://trading-hmm:3004"
+    inference_service_url: str = microservices_config.hmm_service_url
 
 
 class SelfLearningService:

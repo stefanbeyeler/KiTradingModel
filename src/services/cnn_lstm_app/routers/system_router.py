@@ -11,6 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from ..models.schemas import GPUMetricsResponse, HealthResponse, ModelInfo, ModelsListResponse
 
 # Optional GPU monitoring via nvidia-ml-py
@@ -381,7 +382,7 @@ async def get_config():
         "port": int(os.getenv("PORT", "3007")),
         "root_path": os.getenv("ROOT_PATH", "/cnn-lstm"),
         "model_dir": MODEL_DIR,
-        "data_service_url": os.getenv("DATA_SERVICE_URL", "http://trading-data:3001"),
+        "data_service_url": os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url),
         "environment": {
             "OMP_NUM_THREADS": os.getenv("OMP_NUM_THREADS", "not set"),
             "MKL_NUM_THREADS": os.getenv("MKL_NUM_THREADS", "not set"),

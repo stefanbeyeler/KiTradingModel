@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Set
 import httpx
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from .test_definitions import (
     TestDefinition,
     TestCategory,
@@ -102,52 +103,52 @@ class TestRunnerService:
     # Service-Konfiguration für Health-Checks
     SERVICES = {
         "frontend": {
-            "url": "http://trading-frontend:80",
+            "url": microservices_config.frontend_url,
             "health": "/health",
             "name": "Frontend Dashboard"
         },
         "data": {
-            "url": "http://trading-data:3001",
+            "url": microservices_config.data_service_url,
             "health": "/health",
             "name": "Data Service"
         },
         "nhits": {
-            "url": "http://trading-nhits:3002",
+            "url": microservices_config.nhits_service_url,
             "health": "/health",
             "name": "NHITS Service"
         },
         "tcn": {
-            "url": "http://trading-tcn:3003",
+            "url": microservices_config.tcn_service_url,
             "health": "/health",
             "name": "TCN-Pattern Service"
         },
         "tcn_train": {
-            "url": "http://trading-tcn-train:3013",
+            "url": microservices_config.tcn_train_url,
             "health": "/health",
             "name": "TCN-Train Service"
         },
         "hmm": {
-            "url": "http://trading-hmm:3004",
+            "url": microservices_config.hmm_service_url,
             "health": "/health",
             "name": "HMM-Regime Service"
         },
         "embedder": {
-            "url": "http://trading-embedder:3005",
+            "url": microservices_config.embedder_service_url,
             "health": "/health",
             "name": "Embedder Service"
         },
         "rag": {
-            "url": "http://trading-rag:3008",
+            "url": microservices_config.rag_service_url,
             "health": "/health",
             "name": "RAG Service"
         },
         "llm": {
-            "url": "http://trading-llm:3009",
+            "url": microservices_config.llm_service_url,
             "health": "/health",
             "name": "LLM Service"
         },
         "watchdog": {
-            "url": "http://localhost:3010",
+            "url": microservices_config.watchdog_service_url,
             "health": "/health",
             "name": "Watchdog Service"
         },

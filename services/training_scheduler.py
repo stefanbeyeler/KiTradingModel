@@ -142,8 +142,9 @@ class TrainingScheduler:
         """Fetch available symbols from Data Service."""
         try:
             import httpx
+            from src.config.microservices import microservices_config
 
-            data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+            data_service_url = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(f"{data_service_url}/api/v1/managed-symbols")

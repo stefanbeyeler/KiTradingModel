@@ -22,6 +22,7 @@ from typing import Optional, List, Dict, Callable, Awaitable
 from enum import Enum
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from .tcn_pattern_history_service import TCNPatternHistoryEntry
 
 
@@ -746,7 +747,7 @@ class OutcomeTrackerService:
         """
         import httpx
 
-        tcn_train_url = os.getenv("TCN_TRAIN_SERVICE_URL", "http://trading-tcn-train:3013")
+        tcn_train_url = os.getenv("TCN_TRAIN_SERVICE_URL", microservices_config.tcn_train_url)
 
         # Use stored OHLCV data (stored at tracking start), fallback to history lookup
         ohlcv_data = outcome.ohlcv_data

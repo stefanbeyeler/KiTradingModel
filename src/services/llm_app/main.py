@@ -27,10 +27,11 @@ from src.services.llm_app.routers.trading_router import set_llm_service as set_t
 from src.services.llm_service import LLMService
 from src.shared.test_health_router import create_test_health_router
 from src.shared.health import get_test_unhealthy_status
+from src.config.microservices import microservices_config
 
 # RAG Service is now accessed via HTTP API (Port 3008) instead of direct import
 # This avoids dependency conflicts with sentence-transformers in the NVIDIA base image
-RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://trading-rag:3008")
+RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", microservices_config.rag_service_url)
 
 # Global service instances
 llm_service = None
@@ -116,7 +117,7 @@ async def startup_event():
     try:
         import httpx
         async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{os.getenv('DATA_SERVICE_URL', 'http://trading-data:3001')}/api/v1/db/coverage")
+            response = await client.get(f"{os.getenv('DATA_SERVICE_URL', microservices_config.data_service_url)}/api/v1/db/coverage")
             if response.status_code == 200:
                 data = response.json()
                 symbols_count = data.get("symbols_count", 0)

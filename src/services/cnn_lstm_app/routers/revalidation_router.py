@@ -13,7 +13,9 @@ from typing import Optional
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel, Field
 from loguru import logger
+import os
 
+from src.config.microservices import microservices_config
 from ..services.prediction_history_service import prediction_history_service
 from ..services.prediction_feedback_service import prediction_feedback_service, REASON_CATEGORIES
 from ..services.backtesting_service import backtesting_service
@@ -982,7 +984,7 @@ async def validate_with_claude(request: ClaudeValidationRequest):
         if not ohlcv_data:
             # Fallback: versuche Daten zu holen
             import httpx
-            data_service_url = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+            data_service_url = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
                     f"{data_service_url}/api/v1/db/ohlcv/{prediction.get('symbol')}",

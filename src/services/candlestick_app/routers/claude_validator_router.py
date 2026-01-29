@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from loguru import logger
 import httpx
 
+from src.config.microservices import microservices_config
 from ..services.claude_validator_service import (
     claude_validator_service,
     ValidationStatus,
@@ -22,7 +23,7 @@ from ..services.rule_config_service import rule_config_service
 router = APIRouter()
 
 # Data Service URL for fetching OHLCV data
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://trading-data:3001")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", microservices_config.data_service_url)
 
 # Timeframe mapping for Data Service
 TIMEFRAME_TO_INTERVAL = {

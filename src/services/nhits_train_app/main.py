@@ -22,6 +22,7 @@ from loguru import logger
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 
+from src.config.microservices import microservices_config
 from src.services.nhits_train_app.routers import training_router, system_router
 from src.services.nhits_train_app.services.training_service import training_service
 from src.shared.test_health_router import create_test_health_router
@@ -74,8 +75,8 @@ async def startup_event():
     """Initialize service on startup."""
     logger.info("Starting NHITS Training Service...")
     logger.info(f"Model directory: {os.getenv('MODEL_DIR', '/app/data/models/nhits')}")
-    logger.info(f"Data Service URL: {os.getenv('DATA_SERVICE_URL', 'http://trading-data:3001')}")
-    logger.info(f"NHITS Service URL: {os.getenv('NHITS_SERVICE_URL', 'http://trading-nhits:3002')}")
+    logger.info(f"Data Service URL: {os.getenv('DATA_SERVICE_URL', microservices_config.data_service_url)}")
+    logger.info(f"NHITS Service URL: {os.getenv('NHITS_SERVICE_URL', microservices_config.nhits_service_url)}")
 
     # Check PyTorch availability
     try:

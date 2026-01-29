@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from loguru import logger
 
+from src.config.microservices import microservices_config
 from .feedback_buffer_service import feedback_buffer_service
 
 
@@ -105,7 +106,7 @@ class SelfLearningOrchestrator:
         # Service URLs
         self._candlestick_service_url = os.getenv(
             "CANDLESTICK_SERVICE_URL",
-            "http://trading-candlestick:3006"
+            microservices_config.candlestick_service_url
         )
 
         # Load saved state
