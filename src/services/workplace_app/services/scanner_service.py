@@ -24,6 +24,24 @@ from .watchlist_service import watchlist_service
 from .setup_recorder_service import setup_recorder
 
 
+# Mindestzeit zwischen Setup-Aufzeichnungen pro Timeframe
+# (verhindert Duplikate bei unverändertem Markt)
+RECORDING_COOLDOWN = {
+    "M1": timedelta(minutes=5),
+    "M5": timedelta(minutes=15),
+    "M15": timedelta(minutes=30),
+    "M30": timedelta(hours=1),
+    "H1": timedelta(hours=2),
+    "H4": timedelta(hours=4),
+    "D1": timedelta(hours=12),
+    "W1": timedelta(days=2),
+    "MN": timedelta(weeks=1),
+}
+
+# Mindest-Score-Änderung für neue Aufzeichnung
+SCORE_CHANGE_THRESHOLD = 5.0
+
+
 class ScannerService:
     """Background-Scanner für Watchlist-Symbole."""
 
@@ -39,10 +57,14 @@ class ScannerService:
         self._errors_count = 0
         self._alerts_triggered = 0
         self._setups_recorded = 0
+        self._setups_deduplicated = 0  # Zähler für übersprungene Duplikate
         self._scan_start_time: Optional[datetime] = None
         # Alert-State: Speichert letzten Alert-Zustand pro Symbol
         # Format: {symbol: {"alerted": bool, "direction": str, "score": float}}
         self._alert_state: dict[str, dict] = {}
+        # Recorded-State: Speichert zuletzt aufgezeichnetes Setup pro Symbol/Timeframe
+        # Format: {f"{symbol}_{timeframe}": {"direction": str, "score": float, "recorded_at": datetime, "entry_price": float}}
+        self._recorded_setups: dict[str, dict] = {}
 
     async def start(self):
         """Startet den Auto-Scanner."""
@@ -137,9 +159,15 @@ class ScannerService:
                             # Setup zur Prediction History aufzeichnen
                             # (nur bei relevanten Scores für Evaluation)
                             if setup.composite_score >= 50 and setup.direction != SignalDirection.NEUTRAL:
-                                prediction_id = await setup_recorder.record_setup(setup)
-                                if prediction_id:
-                                    self._setups_recorded += 1
+                                # Deduplizierung: Prüfen ob Setup signifikant anders ist
+                                if self._should_record_setup(setup):
+                                    prediction_id = await setup_recorder.record_setup(setup)
+                                    if prediction_id:
+                                        self._setups_recorded += 1
+                                        # State aktualisieren
+                                        self._update_recorded_state(setup)
+                                else:
+                                    self._setups_deduplicated += 1
 
                     except Exception as e:
                         logger.error(f"Fehler beim Scannen von {symbol}: {e}")
@@ -294,6 +322,95 @@ class ScannerService:
 
         except Exception as e:
             logger.debug(f"Alert-Check Fehler für {symbol}: {e}")
+
+    def _should_record_setup(self, setup: TradingSetup) -> bool:
+        """
+        Prüft ob ein Setup aufgezeichnet werden soll (Deduplizierung).
+
+        Ein Setup wird aufgezeichnet wenn:
+        1. Es für diese Symbol/Timeframe-Kombination noch kein aufgezeichnetes Setup gibt
+        2. ODER die Richtung sich geändert hat (long -> short oder umgekehrt)
+        3. ODER der Score sich um mehr als SCORE_CHANGE_THRESHOLD geändert hat
+        4. ODER die Cooldown-Zeit für diesen Timeframe vergangen ist
+        5. ODER der Entry-Preis sich signifikant geändert hat (> 0.5%)
+        """
+        cache_key = f"{setup.symbol}_{setup.timeframe or 'H1'}"
+        prev_state = self._recorded_setups.get(cache_key)
+
+        if not prev_state:
+            # Fall 1: Erstes Setup für diese Kombination
+            logger.debug(f"Neues Setup für {cache_key} - erste Aufzeichnung")
+            return True
+
+        current_direction = setup.direction.value if setup.direction else "neutral"
+        prev_direction = prev_state.get("direction")
+        prev_score = prev_state.get("score", 0)
+        prev_recorded_at = prev_state.get("recorded_at")
+        prev_entry_price = prev_state.get("entry_price")
+
+        # Fall 2: Richtungswechsel
+        if prev_direction and prev_direction != current_direction:
+            logger.debug(
+                f"Setup {cache_key}: Richtungswechsel {prev_direction} → {current_direction}"
+            )
+            return True
+
+        # Fall 3: Signifikante Score-Änderung
+        score_change = abs(setup.composite_score - prev_score)
+        if score_change >= SCORE_CHANGE_THRESHOLD:
+            logger.debug(
+                f"Setup {cache_key}: Score-Änderung {prev_score:.1f} → {setup.composite_score:.1f} "
+                f"(Δ{score_change:.1f})"
+            )
+            return True
+
+        # Fall 4: Cooldown-Zeit vergangen
+        if prev_recorded_at:
+            timeframe = setup.timeframe or "H1"
+            cooldown = RECORDING_COOLDOWN.get(timeframe, timedelta(hours=1))
+            elapsed = datetime.now(timezone.utc) - prev_recorded_at
+
+            if elapsed >= cooldown:
+                logger.debug(
+                    f"Setup {cache_key}: Cooldown abgelaufen "
+                    f"({elapsed.total_seconds()/60:.0f}min >= {cooldown.total_seconds()/60:.0f}min)"
+                )
+                return True
+
+        # Fall 5: Signifikante Preisänderung (> 0.5%)
+        current_entry = getattr(setup, 'entry_price', None) or getattr(setup, 'current_price', None)
+        if prev_entry_price and current_entry:
+            price_change_pct = abs((current_entry - prev_entry_price) / prev_entry_price) * 100
+            if price_change_pct >= 0.5:
+                logger.debug(
+                    f"Setup {cache_key}: Preis-Änderung {prev_entry_price:.2f} → {current_entry:.2f} "
+                    f"({price_change_pct:.2f}%)"
+                )
+                return True
+
+        # Keine signifikante Änderung - nicht aufzeichnen
+        if prev_recorded_at:
+            elapsed = datetime.now(timezone.utc) - prev_recorded_at
+            remaining = RECORDING_COOLDOWN.get(setup.timeframe or "H1", timedelta(hours=1)) - elapsed
+            logger.debug(
+                f"Setup {cache_key}: Duplikat übersprungen "
+                f"(Score Δ{score_change:.1f}, noch {remaining.total_seconds()/60:.0f}min Cooldown)"
+            )
+
+        return False
+
+    def _update_recorded_state(self, setup: TradingSetup):
+        """Aktualisiert den State für ein aufgezeichnetes Setup."""
+        cache_key = f"{setup.symbol}_{setup.timeframe or 'H1'}"
+        current_direction = setup.direction.value if setup.direction else "neutral"
+        entry_price = getattr(setup, 'entry_price', None) or getattr(setup, 'current_price', None)
+
+        self._recorded_setups[cache_key] = {
+            "direction": current_direction,
+            "score": setup.composite_score,
+            "recorded_at": datetime.now(timezone.utc),
+            "entry_price": entry_price,
+        }
 
     async def trigger_manual_scan(self) -> ScanTriggerResponse:
         """Löst einen manuellen Scan aus."""
