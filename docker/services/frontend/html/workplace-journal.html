@@ -1056,6 +1056,49 @@
                 loadSymbols(),
                 loadPredictions(true)
             ]);
+
+            // URL-Parameter prüfen für Deep-Link
+            const urlParams = new URLSearchParams(window.location.search);
+            const predictionId = urlParams.get('prediction_id');
+            const setupSymbol = urlParams.get('symbol');
+            const setupTimestamp = urlParams.get('timestamp');
+
+            if (predictionId) {
+                // Direkt Prediction öffnen
+                openDetailModal(predictionId);
+            } else if (setupSymbol && setupTimestamp) {
+                // Nach Prediction suchen basierend auf Symbol und Timestamp
+                await openPredictionBySetup(setupSymbol, setupTimestamp);
+            }
+        }
+
+        async function openPredictionBySetup(symbol, timestamp) {
+            // Suche passende Prediction basierend auf Symbol und Timestamp (±5 Minuten)
+            try {
+                const targetTime = new Date(timestamp).getTime();
+                const tolerance = 5 * 60 * 1000; // 5 Minuten
+
+                // Filter nach Symbol
+                document.getElementById('filterSymbol').value = symbol;
+                await applyServerFilter();
+
+                // Warte kurz auf Daten-Load
+                await new Promise(r => setTimeout(r, 500));
+
+                // Finde passende Prediction
+                const matching = allPredictions.find(p => {
+                    const predTime = new Date(p.created_at).getTime();
+                    return Math.abs(predTime - targetTime) <= tolerance;
+                });
+
+                if (matching) {
+                    openDetailModal(matching.prediction_id);
+                } else {
+                    console.log('Keine passende Prediction gefunden für', symbol, timestamp);
+                }
+            } catch (e) {
+                console.error('Fehler beim Suchen der Prediction:', e);
+            }
         }
 
         async function loadStats() {

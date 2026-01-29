@@ -474,6 +474,256 @@
                 order: 2;
             }
         }
+
+        .trade-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            cursor: pointer;
+            border: none;
+            margin-left: 0.5rem;
+        }
+
+        .trade-action-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Detail Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            background: #1a1a2e;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-header .symbol-badge { font-size: 1rem; color: #64c8ff; }
+        .modal-header .tf-badge {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            background: rgba(100, 200, 255, 0.15);
+            border-radius: 4px;
+            color: #94a3b8;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover { color: #fff; }
+        .modal-body { padding: 1.5rem; }
+
+        .detail-section { margin-bottom: 1.5rem; }
+        .detail-section:last-child { margin-bottom: 0; }
+        .detail-section-header {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64c8ff;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(100, 200, 255, 0.2);
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .overview-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .overview-item .label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .overview-item .value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .overview-item .value.score-high { color: #10b981; }
+        .overview-item .value.score-med { color: #f59e0b; }
+        .overview-item .value.score-low { color: #ef4444; }
+        .overview-item .value.long { color: #10b981; }
+        .overview-item .value.short { color: #ef4444; }
+        .overview-item .value.neutral { color: #94a3b8; }
+
+        .key-drivers-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .key-driver {
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+            color: #e8e8e8;
+        }
+
+        .signals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .signal-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .signal-card.unavailable { opacity: 0.5; }
+
+        .signal-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .signal-card-title { font-weight: 600; font-size: 0.9rem; color: #e8e8e8; }
+
+        .signal-card-badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .signal-card-badge.long { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .signal-card-badge.short { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .signal-card-badge.neutral { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+        .signal-card-badge.unavailable { background: rgba(100, 100, 100, 0.2); color: #64748b; }
+
+        .signal-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .signal-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+        }
+
+        .signal-detail .label { color: #64748b; }
+        .signal-detail .value { color: #e8e8e8; font-weight: 500; }
+        .signal-detail.full-width { grid-column: 1 / -1; }
+
+        .signal-patterns {
+            grid-column: 1 / -1;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .signal-patterns .label { color: #64748b; font-size: 0.75rem; margin-bottom: 0.25rem; }
+        .signal-patterns .patterns-list { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+
+        .pattern-tag {
+            background: rgba(100, 200, 255, 0.1);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: #64c8ff;
+        }
+
+        .price-info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .price-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .price-item .label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .price-item .value { font-size: 1rem; font-weight: 600; color: #e8e8e8; }
+
+        .meta-info { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        .meta-item { font-size: 0.85rem; }
+        .meta-item .label { color: #64748b; margin-right: 0.5rem; }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #64c8ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
     </style>
 </head>
 <body>
@@ -604,10 +854,33 @@
         </div>
     </div>
 
+    <!-- Setup Detail Modal -->
+    <div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>
+                    <span class="symbol-badge" id="modalSymbol">-</span>
+                    <span class="tf-badge" id="modalTimeframe">-</span>
+                    Setup Details
+                </h2>
+                <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Lade Details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const WORKPLACE_API = '/workplace/api/v1/mt5';
+        const DATA_API = '/data/api/v1/mt5';
+        const DATA_SERVICE_URL = '/data';
 
         let currentTerminalId = null;
+        let tradesCache = {}; // Trade-Daten für Modal
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
@@ -618,7 +891,7 @@
         async function loadOverview() {
             try {
                 const response = await fetch(`${WORKPLACE_API}/overview`);
-                if (!response.ok) throw new Error('API error');
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
 
                 const data = await response.json();
 
@@ -632,11 +905,14 @@
                 renderTerminals(data.terminals);
 
                 // Load trades
-                loadTrades();
+                await loadTrades();
+
+                console.log('Overview loaded successfully');
 
             } catch (error) {
                 console.error('Error loading overview:', error);
                 updateConnectionStatus(false);
+                throw error; // Re-throw für refreshData()
             }
         }
 
@@ -749,6 +1025,10 @@
         function renderTrades(trades) {
             const container = document.getElementById('tradesContainer');
 
+            // Cache trades für Modal-Zugriff
+            tradesCache = {};
+            trades.forEach(t => tradesCache[t.trade_id] = t);
+
             if (trades.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -771,6 +1051,7 @@
                             <th>P/L</th>
                             <th>Status</th>
                             <th>Setup-Link</th>
+                            <th>Aktion</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -803,16 +1084,30 @@
                      + Verknüpfen
                    </span>`;
 
+            // Action button for open trades
+            const actionHtml = trade.status === 'open'
+                ? `<button class="trade-action-btn" onclick="closeTrade('${trade.trade_id}')">✗ Schliessen</button>`
+                : '-';
+
+            // Format price based on symbol
+            const formatPrice = (price) => {
+                if (!price) return '-';
+                if (trade.symbol.includes('JPY')) return price.toFixed(3);
+                if (trade.symbol.includes('BTC') || trade.symbol.includes('ETH')) return price.toFixed(2);
+                return price.toFixed(5);
+            };
+
             return `
                 <tr>
                     <td class="trade-symbol">${trade.symbol}</td>
                     <td><span class="trade-type ${trade.trade_type}">${trade.trade_type.toUpperCase()}</span></td>
                     <td>${trade.volume}</td>
-                    <td>${entryTime}<br><small>${trade.entry_price.toFixed(5)}</small></td>
-                    <td>${exitTime}<br><small>${trade.exit_price ? trade.exit_price.toFixed(5) : '-'}</small></td>
+                    <td>${entryTime}<br><small>${formatPrice(trade.entry_price)}</small></td>
+                    <td>${exitTime}<br><small>${formatPrice(trade.exit_price)}</small></td>
                     <td class="trade-profit ${profitClass}">${profitSign}${profit.toFixed(2)}</td>
                     <td>${trade.status}</td>
                     <td>${linkHtml}</td>
+                    <td>${actionHtml}</td>
                 </tr>
             `;
         }
@@ -829,7 +1124,7 @@
         async function loadPerformance() {
             try {
                 const response = await fetch(`${WORKPLACE_API}/performance/by-setup?days=30`);
-                if (!response.ok) throw new Error('API error');
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
 
                 const data = await response.json();
 
@@ -844,8 +1139,11 @@
                 document.getElementById('perfRecommendation').textContent =
                     rec.length > 50 ? rec.substring(0, 47) + '...' : rec;
 
+                console.log('Performance loaded successfully');
+
             } catch (error) {
                 console.error('Error loading performance:', error);
+                throw error; // Re-throw für refreshData()
             }
         }
 
@@ -866,9 +1164,381 @@
             }
         }
 
-        function viewSetupLink(tradeId) {
-            // TODO: Modal mit Setup-Details öffnen
-            alert('Setup-Details für Trade: ' + tradeId);
+        async function viewSetupLink(tradeId) {
+            const trade = tradesCache[tradeId];
+            if (!trade || !trade.setup) {
+                alert('Setup nicht gefunden');
+                return;
+            }
+
+            const setup = trade.setup;
+
+            // Modal öffnen und Lade-Anzeige zeigen
+            const modal = document.getElementById('detailModal');
+            const modalBody = document.getElementById('modalBody');
+            document.getElementById('modalSymbol').textContent = setup.setup_symbol;
+            document.getElementById('modalTimeframe').textContent = setup.setup_timeframe;
+            modal.classList.add('active');
+            modalBody.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Lade Details...</p></div>`;
+
+            // Suche passende Prediction via API (mit trailing slash!)
+            try {
+                const params = new URLSearchParams({
+                    service: 'workplace',
+                    symbol: setup.setup_symbol,
+                    timeframe: setup.setup_timeframe,
+                    limit: 100
+                });
+
+                const response = await fetch(`${DATA_SERVICE_URL}/api/v1/predictions/?${params.toString()}`);
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+                const predictions = await response.json();
+
+                // Finde Prediction mit passendem Timestamp (±5 Minuten)
+                const targetTime = new Date(setup.setup_timestamp).getTime();
+                const tolerance = 5 * 60 * 1000;
+
+                const matching = predictions.find(p => {
+                    const predTime = new Date(p.created_at).getTime();
+                    return Math.abs(predTime - targetTime) <= tolerance;
+                });
+
+                if (matching) {
+                    // Lade vollständige Prediction-Details
+                    const detailResponse = await fetch(`${DATA_SERVICE_URL}/api/v1/predictions/${matching.prediction_id}`);
+                    if (!detailResponse.ok) throw new Error('Details nicht verfügbar');
+                    const data = await detailResponse.json();
+                    renderDetailContent(data);
+                } else {
+                    // Keine passende Prediction gefunden - zeige Setup-Info aus Trade
+                    renderBasicSetupInfo(setup, trade);
+                }
+            } catch (error) {
+                console.error('Error loading setup details:', error);
+                // Bei Fehler: zeige zumindest die verfügbaren Setup-Info
+                renderBasicSetupInfo(setup, trade, error.message);
+            }
+        }
+
+        function renderBasicSetupInfo(setup, trade, errorMsg = null) {
+            const modalBody = document.getElementById('modalBody');
+            const direction = setup.setup_direction || 'neutral';
+            const score = setup.setup_score || 0;
+            const scoreClass = score >= 75 ? 'score-high' : score >= 50 ? 'score-med' : 'score-low';
+
+            let html = '';
+
+            if (errorMsg) {
+                html += `<div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.85rem; color: #f87171;">
+                    <strong>Hinweis:</strong> Prediction-Details konnten nicht geladen werden. (${errorMsg})
+                </div>`;
+            } else {
+                html += `<div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.85rem; color: #fbbf24;">
+                    <strong>Hinweis:</strong> Keine detaillierte Prediction für diesen Zeitpunkt verfügbar. Zeige gespeicherte Setup-Daten.
+                </div>`;
+            }
+
+            html += `
+            <div class="detail-section">
+                <div class="detail-section-header">Setup-Übersicht</div>
+                <div class="overview-grid">
+                    <div class="overview-item">
+                        <div class="label">Score</div>
+                        <div class="value ${scoreClass}">${score.toFixed(1)}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Richtung</div>
+                        <div class="value ${direction}">${direction.toUpperCase()}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Symbol</div>
+                        <div class="value">${setup.setup_symbol}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Timeframe</div>
+                        <div class="value">${setup.setup_timeframe}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-header">Trade-Info</div>
+                <div class="overview-grid">
+                    <div class="overview-item">
+                        <div class="label">Typ</div>
+                        <div class="value ${trade.trade_type}">${trade.trade_type.toUpperCase()}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Volume</div>
+                        <div class="value">${trade.volume}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">Entry</div>
+                        <div class="value">${trade.entry_price ? trade.entry_price.toFixed(5) : '-'}</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="label">P/L</div>
+                        <div class="value ${trade.profit >= 0 ? 'positive' : 'negative'}">${trade.profit >= 0 ? '+' : ''}${(trade.profit || 0).toFixed(2)}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-header">Zeitstempel</div>
+                <div class="meta-info">
+                    <div class="meta-item">
+                        <span class="label">Setup-Zeit:</span>
+                        <span>${setup.setup_timestamp ? formatDateTime(setup.setup_timestamp) : '-'}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="label">Trade-Entry:</span>
+                        <span>${trade.entry_time ? formatDateTime(trade.entry_time) : '-'}</span>
+                    </div>
+                    ${trade.exit_time ? `<div class="meta-item"><span class="label">Trade-Exit:</span><span>${formatDateTime(trade.exit_time)}</span></div>` : ''}
+                </div>
+            </div>`;
+
+            modalBody.innerHTML = html;
+        }
+
+        // ==================== Detail Modal Functions ====================
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        function closeModal(event) {
+            if (event.target === event.currentTarget) {
+                closeDetailModal();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeDetailModal();
+        });
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleDateString('de-CH', {
+                day: '2-digit', month: '2-digit', year: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function formatPriceModal(price, symbol) {
+            let decimals = 2;
+            if (symbol && (symbol.includes('JPY') || symbol.includes('XAU'))) decimals = 3;
+            else if (symbol && symbol.includes('BTC')) decimals = 1;
+            else if (symbol && symbol.includes('USD') && !symbol.includes('BTC') && !symbol.includes('ETH')) decimals = 5;
+            return price.toLocaleString('de-CH', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        }
+
+        function analyzeSignals(signals, setupDirection) {
+            const serviceNames = ['nhits', 'hmm', 'tcn', 'candlestick', 'technical', 'cnn_lstm'];
+            let availableCount = 0, sameDirection = 0, oppositeDirection = 0;
+
+            serviceNames.forEach(name => {
+                const sig = signals[name];
+                if (sig && sig.available) {
+                    availableCount++;
+                    let sigDir = 'neutral';
+                    if (sig.direction) sigDir = sig.direction;
+                    else if (sig.price_direction) sigDir = sig.price_direction;
+                    else if (sig.alignment === 'aligned') sigDir = setupDirection;
+                    else if (sig.alignment === 'contrary') sigDir = setupDirection === 'long' ? 'short' : 'long';
+
+                    if (sigDir === setupDirection) sameDirection++;
+                    else if (sigDir !== 'neutral' && sigDir !== setupDirection) oppositeDirection++;
+                }
+            });
+
+            let alignment = 'mixed';
+            if (availableCount === 0) alignment = '-';
+            else if (oppositeDirection === 0 && sameDirection >= 2) alignment = 'strong';
+            else if (sameDirection > oppositeDirection) alignment = 'moderate';
+            else if (oppositeDirection > sameDirection) alignment = 'contrary';
+
+            return { signalsCount: availableCount, alignment };
+        }
+
+        function renderSignalCard(name, signal, detailsFn, unavailableMsg = 'Signal nicht verfügbar') {
+            const isAvailable = signal && signal.available;
+            const direction = signal?.direction || signal?.price_direction || 'neutral';
+            const dirClass = isAvailable ? direction : 'unavailable';
+            const dirLabel = isAvailable ? direction.toUpperCase() : 'N/A';
+
+            let html = `
+            <div class="signal-card ${!isAvailable ? 'unavailable' : ''}">
+                <div class="signal-card-header">
+                    <span class="signal-card-title">${name}</span>
+                    <span class="signal-card-badge ${dirClass}">${dirLabel}</span>
+                </div>`;
+
+            if (isAvailable) {
+                html += `<div class="signal-details">${detailsFn(signal)}</div>`;
+            } else {
+                html += `<div class="signal-details"><span style="color: #64748b;">${unavailableMsg}</span></div>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        function renderDetailContent(data) {
+            const pred = data.prediction || {};
+            const signals = pred.signals || {};
+
+            document.getElementById('modalSymbol').textContent = data.symbol;
+            document.getElementById('modalTimeframe').textContent = data.timeframe;
+
+            const direction = pred.direction || 'neutral';
+            const score = Number(pred.composite_score) || 0;
+            const confidence = pred.confidence_level || 'low';
+            const keyDrivers = pred.key_drivers || [];
+
+            const { signalsCount, alignment } = analyzeSignals(signals, direction);
+            const signalsAvailable = pred.signals_available || signalsCount;
+            const signalAlignment = pred.signal_alignment || alignment;
+
+            const scoreClass = score >= 75 ? 'score-high' : score >= 50 ? 'score-med' : 'score-low';
+            const alignmentClass = signalAlignment === 'strong' ? 'score-high' : signalAlignment === 'moderate' ? 'score-med' : '';
+
+            let html = `
+            <div class="detail-section">
+                <div class="detail-section-header">Übersicht</div>
+                <div class="overview-grid">
+                    <div class="overview-item"><div class="label">Score</div><div class="value ${scoreClass}">${score.toFixed(1)}</div></div>
+                    <div class="overview-item"><div class="label">Richtung</div><div class="value ${direction}">${direction.toUpperCase()}</div></div>
+                    <div class="overview-item"><div class="label">Konfidenz</div><div class="value">${confidence.toUpperCase()}</div></div>
+                    <div class="overview-item"><div class="label">Alignment</div><div class="value ${alignmentClass}">${signalAlignment.toUpperCase()}</div></div>
+                </div>
+                <div class="overview-grid" style="margin-top: 0.75rem;">
+                    <div class="overview-item"><div class="label">Signale</div><div class="value">${signalsAvailable}/6</div></div>
+                    <div class="overview-item"><div class="label">Timeframe</div><div class="value">${data.timeframe}</div></div>
+                    <div class="overview-item"><div class="label">Horizon</div><div class="value">${data.horizon || '-'}</div></div>
+                    <div class="overview-item"><div class="label">Status</div><div class="value ${data.is_correct === true ? 'score-high' : data.is_correct === false ? 'score-low' : ''}">${data.evaluated_at ? (data.is_correct ? 'Korrekt' : 'Falsch') : 'Offen'}</div></div>
+                </div>
+            </div>`;
+
+            if (keyDrivers.length > 0) {
+                html += `<div class="detail-section"><div class="detail-section-header">Key Drivers</div>
+                    <div class="key-drivers-list">${keyDrivers.map(d => `<span class="key-driver">${d}</span>`).join('')}</div></div>`;
+            }
+
+            // Signale
+            html += `<div class="detail-section"><div class="detail-section-header">Signale</div><div class="signals-grid">`;
+
+            html += renderSignalCard('NHITS', signals.nhits, (sig) => `
+                <div class="signal-detail"><span class="label">Trend Prob.</span><span class="value">${((Number(sig.trend_probability) || 0) * 100).toFixed(0)}%</span></div>
+                <div class="signal-detail"><span class="label">Modell-Konf.</span><span class="value">${sig.model_confidence != null ? (Number(sig.model_confidence) * 100).toFixed(0) + '%' : '-'}</span></div>
+                <div class="signal-detail"><span class="label">Prognose 1h</span><span class="value">${sig.forecast_change_1h != null ? Number(sig.forecast_change_1h).toFixed(2) + '%' : '-'}</span></div>
+                <div class="signal-detail"><span class="label">Prognose 24h</span><span class="value">${sig.forecast_change_24h != null ? Number(sig.forecast_change_24h).toFixed(2) + '%' : '-'}</span></div>
+            `);
+
+            html += renderSignalCard('HMM', signals.hmm, (sig) => `
+                <div class="signal-detail"><span class="label">Regime</span><span class="value">${sig.regime || '-'}</span></div>
+                <div class="signal-detail"><span class="label">Wahrsch.</span><span class="value">${((Number(sig.regime_probability) || 0) * 100).toFixed(0)}%</span></div>
+                <div class="signal-detail"><span class="label">Score</span><span class="value">${(Number(sig.signal_score) || 0).toFixed(1)}</span></div>
+                <div class="signal-detail"><span class="label">Dauer</span><span class="value">${sig.regime_duration ? sig.regime_duration + ' Bars' : '-'}</span></div>
+                <div class="signal-detail full-width"><span class="label">Alignment</span><span class="value">${sig.alignment || '-'}</span></div>
+            `);
+
+            html += renderSignalCard('Technisch', signals.technical, (sig) => `
+                <div class="signal-detail"><span class="label">RSI</span><span class="value">${sig.rsi != null ? Number(sig.rsi).toFixed(1) : '-'} (${sig.rsi_signal || '-'})</span></div>
+                <div class="signal-detail"><span class="label">MACD</span><span class="value">${sig.macd_signal || '-'}</span></div>
+                <div class="signal-detail"><span class="label">Trend Align.</span><span class="value">${((sig.trend_alignment || 0) * 100).toFixed(0)}%</span></div>
+                <div class="signal-detail"><span class="label">BB Position</span><span class="value">${sig.bb_position != null ? (Number(sig.bb_position) * 100).toFixed(0) + '%' : '-'}</span></div>
+            `);
+
+            html += renderSignalCard('CNN-LSTM', signals.cnn_lstm, (sig) => {
+                let details = `
+                <div class="signal-detail"><span class="label">Preis-Richt.</span><span class="value">${sig.price_direction || '-'}</span></div>
+                <div class="signal-detail"><span class="label">Preis-Konf.</span><span class="value">${((Number(sig.price_confidence) || 0) * 100).toFixed(0)}%</span></div>
+                <div class="signal-detail"><span class="label">Regime</span><span class="value">${sig.regime || '-'}</span></div>
+                <div class="signal-detail"><span class="label">Regime-Prob.</span><span class="value">${((Number(sig.regime_probability) || 0) * 100).toFixed(0)}%</span></div>`;
+                if (sig.patterns && sig.patterns.length > 0) {
+                    details += `<div class="signal-patterns"><div class="label">Patterns</div><div class="patterns-list">${sig.patterns.map(p => `<span class="pattern-tag">${p}</span>`).join('')}</div></div>`;
+                }
+                return details;
+            });
+
+            html += renderSignalCard('TCN', signals.tcn, (sig) => {
+                let details = `
+                <div class="signal-detail"><span class="label">Konfidenz</span><span class="value">${((Number(sig.pattern_confidence) || 0) * 100).toFixed(0)}%</span></div>
+                <div class="signal-detail"><span class="label">Kursziel</span><span class="value">${sig.price_target != null ? Number(sig.price_target).toFixed(2) : '-'}</span></div>`;
+                if (sig.patterns && sig.patterns.length > 0) {
+                    details += `<div class="signal-patterns"><div class="label">Patterns</div><div class="patterns-list">${sig.patterns.map(p => `<span class="pattern-tag">${p}</span>`).join('')}</div></div>`;
+                }
+                return details;
+            }, 'kein Pattern erkannt');
+
+            html += renderSignalCard('Candlestick', signals.candlestick, (sig) => {
+                let details = `<div class="signal-detail full-width"><span class="label">Stärke</span><span class="value">${((Number(sig.pattern_strength) || 0) * 100).toFixed(0)}%</span></div>`;
+                if (sig.patterns && sig.patterns.length > 0) {
+                    details += `<div class="signal-patterns"><div class="label">Patterns</div><div class="patterns-list">${sig.patterns.map(p => `<span class="pattern-tag">${p}</span>`).join('')}</div></div>`;
+                }
+                return details;
+            }, 'kein Pattern erkannt');
+
+            html += `</div></div>`;
+
+            // Preis-Info
+            const entryPrice = pred.entry_price;
+            const stopLoss = pred.stop_loss;
+            const takeProfit1 = pred.take_profit_1;
+
+            if (entryPrice) {
+                html += `<div class="detail-section"><div class="detail-section-header">Preis-Info</div><div class="price-info-grid">
+                    <div class="price-item"><div class="label">Entry-Preis</div><div class="value">${formatPriceModal(entryPrice, data.symbol)}</div></div>
+                    ${stopLoss ? `<div class="price-item"><div class="label">Stop-Loss</div><div class="value">${formatPriceModal(stopLoss, data.symbol)}</div></div>` : ''}
+                    ${takeProfit1 ? `<div class="price-item"><div class="label">Take-Profit 1</div><div class="value">${formatPriceModal(takeProfit1, data.symbol)}</div></div>` : ''}
+                </div></div>`;
+            }
+
+            // Zeitstempel
+            html += `<div class="detail-section"><div class="detail-section-header">Zeitstempel</div>
+                <div class="meta-info">
+                    <div class="meta-item"><span class="label">Erstellt:</span><span>${data.predicted_at ? formatDateTime(data.predicted_at) : '-'}</span></div>
+                    <div class="meta-item"><span class="label">Ziel-Zeit:</span><span>${data.target_time ? formatDateTime(data.target_time) : '-'}</span></div>
+                    ${data.evaluated_at ? `<div class="meta-item"><span class="label">Ausgewertet:</span><span>${formatDateTime(data.evaluated_at)}</span></div>` : ''}
+                </div>
+            </div>`;
+
+            document.getElementById('modalBody').innerHTML = html;
+        }
+
+        async function closeTrade(tradeId) {
+            if (!confirm('Trade wirklich als geschlossen markieren?')) return;
+
+            try {
+                // Aktuellen Preis holen
+                const trade = tradesCache[tradeId];
+                if (!trade) {
+                    alert('Trade nicht gefunden');
+                    return;
+                }
+
+                // Trade über Data Service schliessen
+                const response = await fetch(`${DATA_API}/trades/${tradeId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'closed',
+                        exit_time: new Date().toISOString(),
+                        close_reason: 'manual_close'
+                    })
+                });
+
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+                alert('Trade wurde geschlossen');
+                await refreshData();
+
+            } catch (error) {
+                console.error('Error closing trade:', error);
+                alert('Fehler beim Schliessen: ' + error.message);
+            }
         }
 
         function linkTrade(tradeId) {
@@ -876,9 +1546,27 @@
             alert('Manuelles Verknüpfen für Trade: ' + tradeId);
         }
 
-        function refreshData() {
-            loadOverview();
-            loadPerformance();
+        async function refreshData() {
+            const btn = document.querySelector('.btn-secondary');
+            const originalText = btn.textContent;
+            btn.textContent = '↻ Lade...';
+            btn.disabled = true;
+
+            try {
+                await Promise.all([loadOverview(), loadPerformance()]);
+                btn.textContent = '✓ Aktualisiert';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1500);
+            } catch (error) {
+                console.error('Refresh error:', error);
+                btn.textContent = '✗ Fehler';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            } finally {
+                btn.disabled = false;
+            }
         }
     </script>
 </body>

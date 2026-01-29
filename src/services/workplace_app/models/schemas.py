@@ -535,6 +535,7 @@ class MT5TradeSetupLink(BaseModel):
     """Verknüpfung zwischen Trade und Trading-Setup."""
     link_id: str = Field(..., description="Eindeutige Link-ID")
     trade_id: str = Field(..., description="Trade-ID")
+    prediction_id: Optional[str] = Field(None, description="Referenz zur Prediction im Journal")
     setup_symbol: str = Field(..., description="Symbol des Setups")
     setup_timeframe: str = Field(..., description="Timeframe des Setups")
     setup_timestamp: datetime = Field(..., description="Zeitstempel des Setups")
