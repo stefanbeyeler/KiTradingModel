@@ -350,6 +350,13 @@
             font-size: 0.8rem;
         }
 
+        .setup-id-cell {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.75rem;
+            color: #64c8ff;
+            cursor: help;
+        }
+
         .entry-price {
             font-family: 'Consolas', 'Monaco', monospace;
             color: #f0f0f0;
@@ -1059,6 +1066,7 @@
                     <span class="symbol-badge" id="modalSymbol">BTCUSD</span>
                     <span class="tf-badge" id="modalTimeframe">H1</span>
                     Setup Details
+                    <span class="setup-id-badge" id="modalSetupId" style="display: none; font-size: 0.7rem; padding: 0.2rem 0.5rem; background: rgba(100, 200, 255, 0.1); border: 1px solid rgba(100, 200, 255, 0.3); border-radius: 4px; color: #64c8ff; margin-left: 0.5rem;"></span>
                 </h2>
                 <button class="modal-close" onclick="closeDetailModal()">&times;</button>
             </div>
@@ -1317,6 +1325,7 @@
             let html = `<table class="journal-table">
                 <thead>
                     <tr>
+                        <th title="Eindeutige Setup-ID">ID</th>
                         <th title="Zeitpunkt der Setup-Erkennung">Zeit</th>
                         <th title="Trading-Symbol">Symbol</th>
                         <th title="Timeframe der Analyse">TF</th>
@@ -1355,7 +1364,12 @@
                 const scoreClass = score >= 75 ? 'high' : score >= 50 ? 'medium' : 'low';
                 const alignClass = alignment === 'strong' ? 'high' : alignment === 'moderate' ? 'medium' : 'low';
 
+                // Setup-ID: Zeige gekürzte Version (YYMMDD-HHMM)
+                const setupId = pred.setup_id || '';
+                const setupIdShort = setupId ? setupId.split('-').slice(-2).join('-') : '-';
+
                 html += `<tr onclick="openDetailModal('${p.prediction_id}')" title="Klicken für Details">
+                    <td class="setup-id-cell" title="${setupId}">${setupIdShort}</td>
                     <td class="timestamp">${predictedAt}</td>
                     <td class="symbol-cell">${p.symbol}</td>
                     <td>${p.timeframe}</td>
@@ -1681,6 +1695,14 @@
             document.getElementById('modalSymbol').textContent = data.symbol;
             document.getElementById('modalTimeframe').textContent = data.timeframe;
 
+            // Setup-ID im Header anzeigen
+            const setupIdEl = document.getElementById('modalSetupId');
+            const setupId = pred.setup_id || '';
+            if (setupIdEl) {
+                setupIdEl.textContent = setupId;
+                setupIdEl.style.display = setupId ? 'inline' : 'none';
+            }
+
             const direction = pred.direction || 'neutral';
             const score = Number(pred.composite_score) || 0;
             const confidence = pred.confidence_level || 'low';
@@ -1701,6 +1723,12 @@
             html += `
             <div class="detail-section">
                 <div class="detail-section-header">Übersicht</div>
+                ${setupId ? `
+                <div style="margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.75rem; color: #64748b;">Setup-ID:</span>
+                    <span style="font-size: 0.9rem; font-weight: 600; color: #64c8ff; margin-left: 0.5rem;">${setupId}</span>
+                </div>
+                ` : ''}
                 <div class="overview-grid">
                     <div class="overview-item">
                         <div class="label">Score</div>

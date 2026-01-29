@@ -127,6 +127,7 @@ class SetupRecorderService:
                 "timeframe": setup.timeframe or "H1",
                 "prediction_type": "signal",
                 "prediction": {
+                    "setup_id": setup.setup_id if hasattr(setup, 'setup_id') else None,
                     "direction": setup.direction.value if setup.direction else "neutral",
                     "composite_score": setup.composite_score,
                     "confidence_level": confidence_str,
