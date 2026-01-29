@@ -3983,12 +3983,42 @@ Evaluierungszeiträume:
                 cnnLstmMetricsChart.destroy();
             }
 
-            // Create new chart
+            // For single data point, use larger points and bar chart for better visibility
+            const isSinglePoint = history.length === 1;
+            const pointRadius = isSinglePoint ? 10 : 4;
+            const pointHoverRadius = isSinglePoint ? 12 : 6;
+
+            // Create new chart - use bar chart for single point, line for multiple
             cnnLstmMetricsChart = new Chart(ctx, {
-                type: 'line',
+                type: isSinglePoint ? 'bar' : 'line',
                 data: {
                     labels: labels,
-                    datasets: [
+                    datasets: isSinglePoint ? [
+                        {
+                            label: 'Accuracy %',
+                            data: accuracyData,
+                            backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                            borderColor: '#4caf50',
+                            borderWidth: 2,
+                            barPercentage: 0.3
+                        },
+                        {
+                            label: 'Regime-Accuracy %',
+                            data: f1Data,
+                            backgroundColor: 'rgba(100, 200, 255, 0.7)',
+                            borderColor: '#64c8ff',
+                            borderWidth: 2,
+                            barPercentage: 0.3
+                        },
+                        {
+                            label: 'Deploy-Rate %',
+                            data: deployRateData,
+                            backgroundColor: 'rgba(255, 183, 77, 0.7)',
+                            borderColor: '#ffb74d',
+                            borderWidth: 2,
+                            barPercentage: 0.3
+                        }
+                    ] : [
                         {
                             label: 'Accuracy %',
                             data: accuracyData,
@@ -3997,7 +4027,8 @@ Evaluierungszeiträume:
                             borderWidth: 2,
                             fill: true,
                             tension: 0.3,
-                            pointRadius: 4
+                            pointRadius: pointRadius,
+                            pointHoverRadius: pointHoverRadius
                         },
                         {
                             label: 'Regime-Accuracy %',
@@ -4007,7 +4038,8 @@ Evaluierungszeiträume:
                             borderWidth: 2,
                             fill: true,
                             tension: 0.3,
-                            pointRadius: 4
+                            pointRadius: pointRadius,
+                            pointHoverRadius: pointHoverRadius
                         },
                         {
                             label: 'Deploy-Rate %',
