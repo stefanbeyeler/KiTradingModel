@@ -46,6 +46,14 @@ class RateLimiter:
         "/data/redoc",
     }
 
+    # IP prefixes that bypass rate limiting (internal Docker network)
+    WHITELIST_IP_PREFIXES = (
+        "172.",      # Docker bridge networks
+        "10.",       # Internal networks
+        "192.168.",  # Local networks
+        "127.",      # Localhost
+    )
+
     # Paths with stricter limits
     STRICT_PATHS = {"/train", "/training", "/sync"}
 
@@ -113,6 +121,10 @@ class RateLimiter:
         """Check if path is whitelisted (no rate limiting)."""
         return path in self.WHITELIST_PATHS or path.rstrip("/") in self.WHITELIST_PATHS
 
+    def _is_internal_ip(self, client_ip: str) -> bool:
+        """Check if IP is from internal/Docker network (bypass rate limiting)."""
+        return client_ip.startswith(self.WHITELIST_IP_PREFIXES)
+
     async def _increment_redis(self, key: str) -> int:
         """Increment counter in Redis."""
         try:
@@ -156,6 +168,10 @@ class RateLimiter:
         """
         # Whitelisted paths bypass rate limiting
         if self._is_whitelisted(path):
+            return True, -1, {}
+
+        # Internal Docker/network IPs bypass rate limiting
+        if self._is_internal_ip(client_ip):
             return True, -1, {}
 
         # Determine limit and create key

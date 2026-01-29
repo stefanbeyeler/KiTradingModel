@@ -23,7 +23,8 @@ from .data_gateway_service import data_gateway
 logger = logging.getLogger(__name__)
 
 # Data Service URL for fetching training data (with caching)
-DATA_SERVICE_URL = "http://trading-data:3001"
+# Uses central configuration from settings - can be overridden via DATA_SERVICE_URL env var
+DATA_SERVICE_URL = settings.data_service_url
 
 
 class NHITSTrainingService:

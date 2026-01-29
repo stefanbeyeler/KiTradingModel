@@ -116,8 +116,10 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
 
     # Microservice URLs (for inter-service communication)
+    # Note: Defaults use Docker container names. Override via environment variable
+    # DATA_SERVICE_URL for local development (e.g., http://localhost:3001)
     data_service_url: str = Field(
-        default="http://localhost:3001",
+        default="http://trading-data:3001",
         description="URL of the Data Service for external data access"
     )
 

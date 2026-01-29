@@ -65,7 +65,7 @@ class DataGatewayService:
     def __init__(self):
         self._http_client: Optional[httpx.AsyncClient] = None
         self._easyinsight_url = settings.easyinsight_api_url
-        base_url = getattr(settings, 'data_service_url', 'http://trading-data:3001')
+        base_url = settings.data_service_url
         # Ensure /api/v1 suffix
         self._data_service_url = base_url.rstrip('/') + '/api/v1' if not base_url.endswith('/api/v1') else base_url
         # Cache Service wird verwendet - kein lokaler Cache mehr nötig

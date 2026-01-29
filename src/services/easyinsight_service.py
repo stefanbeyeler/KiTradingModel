@@ -56,7 +56,7 @@ class EasyInsightService:
 
     def __init__(self):
         self._api_url: str = settings.easyinsight_api_url
-        self._data_service_url: str = "http://trading-data:3001"  # Fallback for managed symbols
+        self._data_service_url: str = settings.data_service_url  # Fallback for managed symbols
         self._http_client: Optional[httpx.AsyncClient] = None
         self._cache_initialized: bool = False
         self._total_calls: int = 0
