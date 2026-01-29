@@ -493,6 +493,32 @@
             background: rgba(239, 68, 68, 0.3);
         }
 
+        /* Active trades section highlight */
+        .active-trades-section {
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: rgba(16, 185, 129, 0.03);
+        }
+
+        .active-trades-section .section-title {
+            color: #34d399;
+        }
+
+        .trade-count {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .no-active-trades {
+            text-align: center;
+            padding: 1.5rem;
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
         /* Detail Modal Styles */
         .modal-overlay {
             display: none;
@@ -804,22 +830,30 @@
 
             <!-- Main Content -->
             <div class="main-content">
-                <!-- Trades Table -->
+                <!-- Active Trades -->
+                <div class="trades-section active-trades-section">
+                    <div class="section-header">
+                        <span class="section-title">Aktive Trades</span>
+                        <span class="trade-count" id="activeTradeCount">0</span>
+                    </div>
+                    <div id="activeTradesContainer">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Closed Trades -->
                 <div class="trades-section">
                     <div class="section-header">
-                        <span class="section-title">Trade-Historie</span>
+                        <span class="section-title">Abgeschlossene Trades</span>
                         <div class="section-filters">
-                            <select class="filter-select" id="filterStatus" onchange="loadTrades()">
-                                <option value="">Alle Status</option>
-                                <option value="open">Offen</option>
-                                <option value="closed">Geschlossen</option>
-                            </select>
                             <select class="filter-select" id="filterSymbol" onchange="loadTrades()">
                                 <option value="">Alle Symbole</option>
                             </select>
                         </div>
                     </div>
-                    <div id="tradesContainer">
+                    <div id="closedTradesContainer">
                         <div class="loading">
                             <div class="spinner"></div>
                         </div>
@@ -991,15 +1025,15 @@
         }
 
         async function loadTrades() {
-            const container = document.getElementById('tradesContainer');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            const activeContainer = document.getElementById('activeTradesContainer');
+            const closedContainer = document.getElementById('closedTradesContainer');
+            activeContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            closedContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
             try {
-                const status = document.getElementById('filterStatus').value;
                 const symbol = document.getElementById('filterSymbol').value;
 
-                let url = `${WORKPLACE_API}/trades?limit=50`;
-                if (status) url += `&status=${status}`;
+                let url = `${WORKPLACE_API}/trades?limit=100`;
                 if (symbol) url += `&symbol=${symbol}`;
                 if (currentTerminalId) url += `&terminal_id=${currentTerminalId}`;
 
@@ -1007,33 +1041,109 @@
                 if (!response.ok) throw new Error('API error');
 
                 const data = await response.json();
-                renderTrades(data.trades);
+
+                // Split trades by status
+                const activeTrades = data.trades.filter(t => t.status === 'open');
+                const closedTrades = data.trades.filter(t => t.status === 'closed');
+
+                // Cache all trades für Modal-Zugriff
+                tradesCache = {};
+                data.trades.forEach(t => tradesCache[t.trade_id] = t);
+
+                // Render both sections
+                renderActiveTrades(activeTrades);
+                renderClosedTrades(closedTrades);
 
                 // Update symbol filter
                 updateSymbolFilter(data.trades);
 
             } catch (error) {
                 console.error('Error loading trades:', error);
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-text">Fehler beim Laden der Trades</div>
-                    </div>
-                `;
+                activeContainer.innerHTML = `<div class="empty-state"><div class="empty-state-text">Fehler beim Laden</div></div>`;
+                closedContainer.innerHTML = `<div class="empty-state"><div class="empty-state-text">Fehler beim Laden</div></div>`;
             }
         }
 
-        function renderTrades(trades) {
-            const container = document.getElementById('tradesContainer');
+        function renderActiveTrades(trades) {
+            const container = document.getElementById('activeTradesContainer');
+            document.getElementById('activeTradeCount').textContent = trades.length;
 
-            // Cache trades für Modal-Zugriff
-            tradesCache = {};
-            trades.forEach(t => tradesCache[t.trade_id] = t);
+            if (trades.length === 0) {
+                container.innerHTML = `<div class="no-active-trades">Keine aktiven Trades</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="trades-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Typ</th>
+                            <th>Volume</th>
+                            <th>Entry</th>
+                            <th>Laufzeit</th>
+                            <th>P/L</th>
+                            <th>Setup-Link</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${trades.map(t => renderActiveTradeRow(t)).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderActiveTradeRow(trade) {
+            const profit = trade.profit || 0;
+            const profitClass = profit >= 0 ? 'positive' : 'negative';
+            const profitSign = profit >= 0 ? '+' : '';
+
+            const entryTime = new Date(trade.entry_time);
+            const entryTimeStr = entryTime.toLocaleString('de-CH', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+
+            // Calculate duration
+            const now = new Date();
+            const durationMs = now - entryTime;
+            const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+            const durationMins = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+            const durationStr = durationHours > 0 ? `${durationHours}h ${durationMins}m` : `${durationMins}m`;
+
+            const linkHtml = trade.setup
+                ? `<span class="trade-link" onclick="viewSetupLink('${trade.trade_id}')">✓ ${trade.setup.setup_score.toFixed(0)}%</span>`
+                : `<span class="trade-link no-link" onclick="linkTrade('${trade.trade_id}')">+ Verknüpfen</span>`;
+
+            const formatPrice = (price) => {
+                if (!price) return '-';
+                if (trade.symbol.includes('JPY')) return price.toFixed(3);
+                if (trade.symbol.includes('BTC') || trade.symbol.includes('ETH')) return price.toFixed(2);
+                return price.toFixed(5);
+            };
+
+            return `
+                <tr>
+                    <td class="trade-symbol">${trade.symbol}</td>
+                    <td><span class="trade-type ${trade.trade_type}">${trade.trade_type.toUpperCase()}</span></td>
+                    <td>${trade.volume}</td>
+                    <td>${entryTimeStr}<br><small>${formatPrice(trade.entry_price)}</small></td>
+                    <td>${durationStr}</td>
+                    <td class="trade-profit ${profitClass}">${profitSign}${profit.toFixed(2)}</td>
+                    <td>${linkHtml}</td>
+                    <td><button class="trade-action-btn" onclick="closeTrade('${trade.trade_id}')">✗ Schliessen</button></td>
+                </tr>
+            `;
+        }
+
+        function renderClosedTrades(trades) {
+            const container = document.getElementById('closedTradesContainer');
 
             if (trades.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📊</div>
-                        <div class="empty-state-text">Keine Trades gefunden</div>
+                        <div class="empty-state-text">Keine abgeschlossenen Trades</div>
                     </div>
                 `;
                 return;
@@ -1049,19 +1159,17 @@
                             <th>Entry</th>
                             <th>Exit</th>
                             <th>P/L</th>
-                            <th>Status</th>
                             <th>Setup-Link</th>
-                            <th>Aktion</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${trades.map(t => renderTradeRow(t)).join('')}
+                        ${trades.map(t => renderClosedTradeRow(t)).join('')}
                     </tbody>
                 </table>
             `;
         }
 
-        function renderTradeRow(trade) {
+        function renderClosedTradeRow(trade) {
             const profit = trade.profit || 0;
             const profitClass = profit >= 0 ? 'positive' : 'negative';
             const profitSign = profit >= 0 ? '+' : '';
@@ -1077,19 +1185,9 @@
                 : '-';
 
             const linkHtml = trade.setup
-                ? `<span class="trade-link" onclick="viewSetupLink('${trade.trade_id}')">
-                     ✓ ${trade.setup.setup_score.toFixed(0)}%
-                   </span>`
-                : `<span class="trade-link no-link" onclick="linkTrade('${trade.trade_id}')">
-                     + Verknüpfen
-                   </span>`;
+                ? `<span class="trade-link" onclick="viewSetupLink('${trade.trade_id}')">✓ ${trade.setup.setup_score.toFixed(0)}%</span>`
+                : `<span class="trade-link no-link" onclick="linkTrade('${trade.trade_id}')">+ Verknüpfen</span>`;
 
-            // Action button for open trades
-            const actionHtml = trade.status === 'open'
-                ? `<button class="trade-action-btn" onclick="closeTrade('${trade.trade_id}')">✗ Schliessen</button>`
-                : '-';
-
-            // Format price based on symbol
             const formatPrice = (price) => {
                 if (!price) return '-';
                 if (trade.symbol.includes('JPY')) return price.toFixed(3);
@@ -1105,9 +1203,7 @@
                     <td>${entryTime}<br><small>${formatPrice(trade.entry_price)}</small></td>
                     <td>${exitTime}<br><small>${formatPrice(trade.exit_price)}</small></td>
                     <td class="trade-profit ${profitClass}">${profitSign}${profit.toFixed(2)}</td>
-                    <td>${trade.status}</td>
                     <td>${linkHtml}</td>
-                    <td>${actionHtml}</td>
                 </tr>
             `;
         }
