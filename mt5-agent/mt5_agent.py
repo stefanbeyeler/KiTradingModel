@@ -213,13 +213,14 @@ class MT5Agent:
         """Lädt initiale offene Positionen."""
         positions = mt5.positions_get()
         if positions is None:
+            self.logger.warning(f"positions_get() returned None (error: {mt5.last_error()})")
             return
 
+        self.logger.info(f"Loaded {len(positions)} open positions")
         for pos in positions:
             self._known_positions[pos.ticket] = self._position_to_dict(pos)
             self._known_tickets.add(pos.ticket)
-
-        self.logger.info(f"Loaded {len(positions)} open positions")
+            self.logger.info(f"  Position: ticket={pos.ticket} symbol={pos.symbol} type={'BUY' if pos.type == 0 else 'SELL'} volume={pos.volume}")
 
     def _load_existing_close_deals(self):
         """Synchronisiert geschlossene Trades beim Start und markiert sie als verarbeitet."""
@@ -271,7 +272,12 @@ class MT5Agent:
         """Prüft auf neue oder geänderte Positionen."""
         positions = mt5.positions_get()
         if positions is None:
+            self.logger.debug(f"positions_get() returned None (error: {mt5.last_error()})")
             return
+
+        # Log bei jeder Änderung der Positionsanzahl
+        if len(positions) != len(self._known_tickets):
+            self.logger.info(f"Position count changed: {len(self._known_tickets)} -> {len(positions)}")
 
         current_tickets = set()
 
@@ -332,6 +338,7 @@ class MT5Agent:
 
     def _report_new_trade(self, position):
         """Meldet einen neuen Trade an den Data Service."""
+        self.logger.info(f"Reporting new trade: ticket={position.ticket} symbol={position.symbol} price={position.price_open}")
         trade_data = {
             "terminal_id": self.config.terminal_id,
             "ticket": position.ticket,
@@ -421,8 +428,9 @@ class MT5Agent:
         try:
             response = requests.post(url, json=trade_data, headers=headers, timeout=10)
             if response.status_code in (200, 201):
-                self.logger.debug(f"Trade reported: {trade_data.get('ticket')}")
-                return response.json()
+                result = response.json()
+                self.logger.info(f"Trade reported successfully: ticket={trade_data.get('ticket')} -> trade_id={result.get('trade_id')}")
+                return result
             else:
                 self.logger.error(f"Failed to report trade: {response.status_code} {response.text}")
                 return None
