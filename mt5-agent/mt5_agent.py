@@ -133,7 +133,8 @@ class MT5Agent:
         self.config = config
         self.logger = logger
         self._running = False
-        self._known_tickets: set[int] = set()
+        self._known_tickets: set[int] = set()  # For tracking open positions
+        self._processed_close_deals: set[int] = set()  # For tracking closed deals (separate!)
         self._known_positions: dict[int, dict] = {}
         self._last_heartbeat = 0
 
@@ -166,6 +167,9 @@ class MT5Agent:
 
         # Initiale Positionen laden
         self._load_initial_positions()
+
+        # Bereits geschlossene Deals laden (damit sie nicht erneut gemeldet werden)
+        self._load_existing_close_deals()
 
         self._running = True
         self.logger.info(f"Agent started. Polling interval: {self.config.poll_interval}s")
@@ -217,6 +221,52 @@ class MT5Agent:
 
         self.logger.info(f"Loaded {len(positions)} open positions")
 
+    def _load_existing_close_deals(self):
+        """Synchronisiert geschlossene Trades beim Start und markiert sie als verarbeitet."""
+        from datetime import timedelta
+
+        # Letzte 7 Tage (nicht nur 24 Stunden)
+        to_date = datetime.now(timezone.utc)
+        from_date = to_date - timedelta(days=7)
+
+        self.logger.info(f"Fetching deal history from {from_date} to {to_date}")
+
+        # MT5 erwartet datetime-Objekte
+        deals = mt5.history_deals_get(from_date, to_date)
+        if deals is None:
+            self.logger.info(f"No history deals found (error: {mt5.last_error()})")
+            return
+
+        self.logger.info(f"Total deals in history: {len(deals)}")
+
+        # Debug: Zeige alle Deals mit INFO-Level
+        for d in deals:
+            entry_type = "IN" if d.entry == mt5.DEAL_ENTRY_IN else ("OUT" if d.entry == mt5.DEAL_ENTRY_OUT else f"OTHER({d.entry})")
+            self.logger.info(f"  Deal: ticket={d.ticket} position={d.position_id} entry={entry_type} symbol={d.symbol} time={datetime.fromtimestamp(d.time)}")
+
+        close_deals = [d for d in deals if d.entry == mt5.DEAL_ENTRY_OUT]
+        self.logger.info(f"Found {len(close_deals)} close deals (DEAL_ENTRY_OUT)")
+
+        # Zeige Close-Deals Details
+        for d in close_deals:
+            self.logger.info(f"  Close deal: deal_ticket={d.ticket} position_id={d.position_id} symbol={d.symbol}")
+
+        # Hole Trades aus der DB, um zu prüfen welche noch nicht synchronisiert sind
+        synced_count = 0
+        for deal in close_deals:
+            # Immer als verarbeitet markieren
+            self._processed_close_deals.add(deal.ticket)
+
+            # Prüfe ob Trade in DB noch "open" ist und synchronisiere
+            trade_id = self._get_trade_id(deal.position_id)
+            if trade_id:
+                # Trade existiert - sende Close-Update
+                self.logger.info(f"Syncing closed trade: position={deal.position_id}")
+                self._report_closed_trade(deal)
+                synced_count += 1
+
+        self.logger.info(f"Startup sync complete: {synced_count} trades synchronized, {len(close_deals)} close deals tracked")
+
     def _check_positions(self):
         """Prüft auf neue oder geänderte Positionen."""
         positions = mt5.positions_get()
@@ -253,9 +303,11 @@ class MT5Agent:
 
     def _check_history(self):
         """Prüft Trade-History auf geschlossene Trades."""
+        from datetime import timedelta
+
         # Letzte 24 Stunden
-        from_date = datetime.now(timezone.utc).timestamp() - 86400
-        to_date = datetime.now(timezone.utc).timestamp()
+        to_date = datetime.now(timezone.utc)
+        from_date = to_date - timedelta(hours=24)
 
         deals = mt5.history_deals_get(from_date, to_date)
         if deals is None:
@@ -266,12 +318,16 @@ class MT5Agent:
             if deal.entry != mt5.DEAL_ENTRY_OUT:
                 continue
 
-            # Bereits bekannt?
-            if deal.ticket in self._known_tickets:
+            # Verwende deal.ticket für Tracking (eindeutig pro Close-Deal)
+            deal_ticket = deal.ticket
+
+            # Bereits verarbeitet? Nur prüfen im separaten Close-Deals Set
+            if deal_ticket in self._processed_close_deals:
                 continue
 
-            self._known_tickets.add(deal.ticket)
-            self.logger.info(f"Closed trade detected: {deal.ticket} {deal.symbol}")
+            # Als verarbeitet markieren
+            self._processed_close_deals.add(deal_ticket)
+            self.logger.info(f"Closed trade detected: position={deal.position_id} deal={deal_ticket} {deal.symbol}")
             self._report_closed_trade(deal)
 
     def _report_new_trade(self, position):
@@ -314,10 +370,11 @@ class MT5Agent:
         position_ticket = deal.position_id
 
         # Trade-ID ermitteln
+        self.logger.info(f"Looking up trade_id for position {position_ticket}...")
         trade_id = self._get_trade_id(position_ticket)
         if not trade_id:
             # Neuen Trade + Close melden
-            self.logger.debug(f"Creating closed trade record for ticket {position_ticket}")
+            self.logger.warning(f"Trade not found in DB for position {position_ticket} - creating new record")
             trade_data = {
                 "terminal_id": self.config.terminal_id,
                 "ticket": position_ticket,
@@ -353,6 +410,8 @@ class MT5Agent:
             }
 
             self._send_trade_update(trade_id, update_data)
+        else:
+            self.logger.error(f"Could not close trade - no trade_id found for position {deal.position_id}")
 
     def _send_trade(self, trade_data: dict) -> Optional[dict]:
         """Sendet Trade-Daten an den Data Service."""
@@ -379,7 +438,7 @@ class MT5Agent:
         try:
             response = requests.put(url, json=update_data, headers=headers, timeout=10)
             if response.status_code == 200:
-                self.logger.debug(f"Trade updated: {trade_id}")
+                self.logger.info(f"Trade updated successfully: {trade_id} -> {update_data.get('status', 'modified')}")
             else:
                 self.logger.error(f"Failed to update trade: {response.status_code} {response.text}")
         except requests.RequestException as e:
