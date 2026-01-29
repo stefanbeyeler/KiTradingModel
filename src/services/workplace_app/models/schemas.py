@@ -140,6 +140,7 @@ class CNNLSTMSignal(BaseModel):
 
 class TradingSetup(BaseModel):
     """Aggregiertes Trading-Setup mit Multi-Signal-Scoring."""
+    setup_id: str = Field(..., description="Eindeutige Setup-ID (z.B. S-BTCUSD-H1-001)")
     symbol: str = Field(..., description="Trading-Symbol")
     timeframe: str = Field(default="H1", description="Timeframe")
     timestamp: datetime = Field(..., description="Analyse-Zeitstempel (UTC)")
@@ -176,6 +177,7 @@ class TradingSetup(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "setup_id": "S-BTCUSD-H1-001",
                 "symbol": "BTCUSD",
                 "timeframe": "H1",
                 "timestamp": "2024-01-15T10:30:00Z",
@@ -535,6 +537,7 @@ class MT5TradeSetupLink(BaseModel):
     """Verknüpfung zwischen Trade und Trading-Setup."""
     link_id: str = Field(..., description="Eindeutige Link-ID")
     trade_id: str = Field(..., description="Trade-ID")
+    setup_id: Optional[str] = Field(None, description="Eindeutige Setup-ID (z.B. S-BTCUSD-H1-260129-1430)")
     prediction_id: Optional[str] = Field(None, description="Referenz zur Prediction im Journal")
     setup_symbol: str = Field(..., description="Symbol des Setups")
     setup_timeframe: str = Field(..., description="Timeframe des Setups")

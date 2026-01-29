@@ -143,6 +143,7 @@ class MT5TradeSetupLinkCreate(BaseModel):
     """Request model for linking a trade to a setup."""
 
     trade_id: str
+    setup_id: Optional[str] = Field(None, max_length=50, description="Eindeutige Setup-ID (z.B. S-BTCUSD-H1-260129-1430)")
     setup_symbol: str = Field(..., max_length=20)
     setup_timeframe: str = Field(..., max_length=10)
     setup_timestamp: datetime
@@ -167,6 +168,7 @@ class MT5TradeSetupLink(BaseModel):
 
     link_id: str
     trade_id: str
+    setup_id: Optional[str] = None
     setup_symbol: str
     setup_timeframe: str
     setup_timestamp: datetime
@@ -331,6 +333,7 @@ class MT5TradeHistoryService:
                         id                      SERIAL PRIMARY KEY,
                         link_id                 UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
                         trade_id                UUID NOT NULL,
+                        setup_id                VARCHAR(50),
                         setup_symbol            VARCHAR(20) NOT NULL,
                         setup_timeframe         VARCHAR(10) NOT NULL,
                         setup_timestamp         TIMESTAMPTZ NOT NULL,
@@ -362,6 +365,21 @@ class MT5TradeHistoryService:
                         ON mt5_trade_setup_links (setup_timestamp DESC);
                 """)
                 logger.info("mt5_trade_setup_links table created")
+
+            # Migration: Add setup_id column if it doesn't exist
+            setup_id_exists = await conn.fetchval("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.columns
+                    WHERE table_name = 'mt5_trade_setup_links' AND column_name = 'setup_id'
+                )
+            """)
+            if not setup_id_exists:
+                logger.info("Adding setup_id column to mt5_trade_setup_links...")
+                await conn.execute("""
+                    ALTER TABLE mt5_trade_setup_links
+                    ADD COLUMN setup_id VARCHAR(50)
+                """)
+                logger.info("setup_id column added")
 
     # =========================================================================
     # Terminal Operations
@@ -933,13 +951,14 @@ class MT5TradeHistoryService:
                 row = await conn.fetchrow(
                     """
                     INSERT INTO mt5_trade_setup_links (
-                        trade_id, setup_symbol, setup_timeframe, setup_timestamp,
+                        trade_id, setup_id, setup_symbol, setup_timeframe, setup_timestamp,
                         setup_direction, setup_score, setup_confidence,
                         nhits_direction, nhits_probability, hmm_regime, hmm_score,
                         tcn_patterns, tcn_confidence, candlestick_patterns,
                         candlestick_strength, link_type, link_confidence, notes
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                     ON CONFLICT (trade_id) DO UPDATE SET
+                        setup_id = EXCLUDED.setup_id,
                         setup_symbol = EXCLUDED.setup_symbol,
                         setup_timeframe = EXCLUDED.setup_timeframe,
                         setup_timestamp = EXCLUDED.setup_timestamp,
@@ -960,6 +979,7 @@ class MT5TradeHistoryService:
                     RETURNING *
                     """,
                     uuid.UUID(data.trade_id),
+                    data.setup_id,
                     data.setup_symbol.upper(),
                     data.setup_timeframe,
                     data.setup_timestamp,
@@ -1101,6 +1121,7 @@ class MT5TradeHistoryService:
         return MT5TradeSetupLink(
             link_id=str(row["link_id"]),
             trade_id=str(row["trade_id"]),
+            setup_id=row.get("setup_id"),
             setup_symbol=row["setup_symbol"],
             setup_timeframe=row["setup_timeframe"],
             setup_timestamp=row["setup_timestamp"],

@@ -350,10 +350,15 @@ class ScoringService:
                     symbol=symbol,
                 )
 
+        # Setup-ID generieren: S-{SYMBOL}-{TF}-{YYMMDD-HHMM}
+        now = datetime.now(timezone.utc)
+        setup_id = f"S-{symbol}-{timeframe}-{now.strftime('%y%m%d-%H%M')}"
+
         return TradingSetup(
+            setup_id=setup_id,
             symbol=symbol,
             timeframe=timeframe,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=now,
             direction=direction,
             composite_score=composite_score,
             confidence_level=self.get_confidence_level(composite_score),

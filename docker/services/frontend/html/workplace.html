@@ -558,6 +558,17 @@
             align-items: center;
             font-size: 0.65rem;
             opacity: 0.6;
+            gap: 0.5rem;
+        }
+
+        .setup-id {
+            font-family: 'Courier New', monospace;
+            font-size: 0.55rem;
+            background: rgba(100, 200, 255, 0.15);
+            color: #64c8ff;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            opacity: 1;
         }
 
         /* Entry/Exit Levels - Compact */
@@ -988,6 +999,30 @@
 
         .section-title .icon {
             font-size: 0.75rem;
+        }
+
+        /* Setup-ID Display im Detail Modal */
+        .setup-id-display {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.4rem;
+            padding: 0.2rem 0.4rem;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .setup-id-label {
+            font-size: 0.65rem;
+            color: #9ca3af;
+        }
+
+        .setup-id-value {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #64c8ff;
+            font-weight: 600;
         }
 
         .section-divider {
@@ -2288,6 +2323,7 @@
                         ${signals.map(s => `<span class="signal-tag ${s.available ? 'available' : ''}" title="${s.tooltip}">${s.name}</span>`).join('')}
                     </div>
                     <div class="setup-meta">
+                        <span class="setup-id" title="Setup-ID: ${setup.setup_id || ''}">${setup.setup_id ? setup.setup_id.split('-').slice(-2).join('-') : ''}</span>
                         <span>${setup.timeframe} | ${setup.confidence_level}</span>
                         <button class="setup-detail-btn" onclick="event.stopPropagation(); openDetailModal('${setup.symbol}', '${setup.timeframe}')" title="Alle Details anzeigen">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2658,6 +2694,12 @@
             return `
                 <div class="consolidated-section">
                     <h3 class="section-title"><span class="icon">📊</span> Übersicht</h3>
+                    ${setup.setup_id ? `
+                    <div class="setup-id-display">
+                        <span class="setup-id-label">Setup-ID:</span>
+                        <span class="setup-id-value">${setup.setup_id}</span>
+                    </div>
+                    ` : ''}
                     <div class="score-meter" style="margin-bottom: 0.5rem;">
                         <div class="score-bar">
                             <div class="score-bar-fill ${scoreClass}" style="width: ${setup.composite_score}%"></div>

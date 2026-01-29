@@ -275,6 +275,7 @@ class MT5LinkingService:
         """Erstellt die Link-Daten für den Data Service."""
         return {
             "trade_id": trade.trade_id,
+            "setup_id": setup.setup_id,
             "setup_symbol": setup.symbol,
             "setup_timeframe": setup.timeframe,
             "setup_timestamp": setup.timestamp.isoformat(),
