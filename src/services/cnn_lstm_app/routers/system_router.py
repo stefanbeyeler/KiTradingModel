@@ -6,6 +6,7 @@ Endpoints für Health-Checks, Service-Info und Modell-Verwaltung.
 
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from loguru import logger
@@ -19,6 +20,33 @@ try:
 except ImportError:
     PYNVML_AVAILABLE = False
     logger.info("pynvml not available - GPU metrics will use torch fallback")
+
+
+def _read_gpu_temperature_from_thermal_zone() -> float:
+    """
+    Read GPU temperature from Linux thermal zones (Tegra/Jetson fallback).
+
+    Returns temperature in Celsius, or 0.0 if unavailable.
+    """
+    thermal_base = Path("/sys/class/thermal")
+    if not thermal_base.exists():
+        return 0.0
+
+    try:
+        for zone_dir in thermal_base.iterdir():
+            if not zone_dir.is_dir():
+                continue
+            type_file = zone_dir / "type"
+            temp_file = zone_dir / "temp"
+            if type_file.exists() and temp_file.exists():
+                zone_type = type_file.read_text().strip()
+                if zone_type == "gpu-thermal":
+                    temp_millidegrees = int(temp_file.read_text().strip())
+                    return temp_millidegrees / 1000.0
+    except Exception as e:
+        logger.debug(f"Could not read GPU thermal zone: {e}")
+
+    return 0.0
 
 router = APIRouter()
 
@@ -213,6 +241,9 @@ async def get_gpu_metrics():
             memory_free_mb = memory_total_mb - memory_reserved_mb
             memory_percent = (memory_reserved_mb / memory_total_mb) * 100
 
+            # Try to get temperature from thermal zones (Tegra/Jetson)
+            temperature = _read_gpu_temperature_from_thermal_zone()
+
             return GPUMetricsResponse(
                 available=True,
                 index=0,
@@ -222,12 +253,12 @@ async def get_gpu_metrics():
                 memory_free_mb=round(memory_free_mb, 2),
                 memory_percent=round(memory_percent, 1),
                 utilization_percent=0.0,  # Not available via torch
-                temperature_celsius=0.0,  # Not available via torch
+                temperature_celsius=round(temperature, 1),
                 power_usage_watts=0.0,  # Not available via torch
                 is_healthy=True,
-                error_message="Limited metrics (torch fallback)",
+                error_message=None if temperature > 0 else "Limited metrics (torch fallback)",
                 timestamp=timestamp,
-                source="torch"
+                source="torch+sysfs" if temperature > 0 else "torch"
             )
     except Exception as e:
         logger.warning(f"GPU metrics unavailable: {e}")
