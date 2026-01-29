@@ -131,8 +131,16 @@ async def lifespan(app: FastAPI):
     resource_monitor.memory_warning = settings.resource_memory_warning
     resource_monitor.memory_critical = settings.resource_memory_critical
     resource_monitor.poll_interval = settings.resource_poll_interval
+    resource_monitor.gpu_metrics_service_url = settings.gpu_metrics_service_url
+    resource_monitor.gpu_metrics_timeout = settings.gpu_metrics_timeout
     resource_monitor.register_callback(on_resource_alert)
     await resource_monitor.start()
+
+    # Log GPU monitoring source
+    if resource_monitor._nvml_initialized:
+        logger.info("GPU monitoring: local (pynvml)")
+    elif settings.gpu_metrics_service_url:
+        logger.info(f"GPU monitoring: remote ({settings.gpu_metrics_service_url})")
 
     logger.info(f"Monitoring {len(health_checker.services)} services")
     logger.info(

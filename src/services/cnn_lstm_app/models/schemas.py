@@ -261,6 +261,24 @@ class HealthResponse(BaseModel):
     uptime_seconds: float = Field(..., description="Uptime in Sekunden")
     timestamp: datetime = Field(..., description="Zeitstempel")
 
+
+class GPUMetricsResponse(BaseModel):
+    """GPU-Metriken Response fuer Watchdog-Integration."""
+    available: bool = Field(..., description="GPU verfuegbar")
+    index: int = Field(default=0, description="GPU-Index")
+    name: str = Field(default="Unknown", description="GPU-Name")
+    memory_total_mb: float = Field(default=0.0, description="Gesamter GPU-Speicher (MB)")
+    memory_used_mb: float = Field(default=0.0, description="Genutzter GPU-Speicher (MB)")
+    memory_free_mb: float = Field(default=0.0, description="Freier GPU-Speicher (MB)")
+    memory_percent: float = Field(default=0.0, description="GPU-Speicher Auslastung (%)")
+    utilization_percent: float = Field(default=0.0, description="GPU-Auslastung (%)")
+    temperature_celsius: float = Field(default=0.0, description="GPU-Temperatur (°C)")
+    power_usage_watts: float = Field(default=0.0, description="Stromverbrauch (W)")
+    is_healthy: bool = Field(default=True, description="GPU-Gesundheitsstatus")
+    error_message: Optional[str] = Field(None, description="Fehlermeldung falls vorhanden")
+    timestamp: datetime = Field(..., description="Zeitstempel")
+    source: str = Field(default="pynvml", description="Datenquelle (pynvml oder torch)")
+
     class Config:
         json_schema_extra = {
             "example": {

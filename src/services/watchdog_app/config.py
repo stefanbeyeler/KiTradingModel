@@ -46,6 +46,10 @@ class WatchdogSettings(BaseSettings):
     resource_poll_interval: float = 5.0  # Sekunden zwischen Resource-Checks
     max_concurrent_training: int = 2  # Max gleichzeitige Training-Jobs
 
+    # GPU Monitoring via Remote Service (wenn kein lokaler GPU-Zugang)
+    gpu_metrics_service_url: str = "http://trading-cnn-lstm:3007"  # Service mit GPU-Zugang
+    gpu_metrics_timeout: float = 5.0  # Timeout für GPU-Metriken-Abfrage
+
     model_config = {
         "env_file": ".env.watchdog",
         "env_prefix": "WATCHDOG_",

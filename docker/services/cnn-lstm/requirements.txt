@@ -17,3 +17,6 @@ loguru>=0.7.0
 
 # Utils
 python-dotenv>=1.0.0
+
+# GPU Monitoring (for exposing GPU metrics to Watchdog)
+nvidia-ml-py>=12.0.0

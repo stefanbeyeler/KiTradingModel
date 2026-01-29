@@ -10,7 +10,15 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
-from ..models.schemas import HealthResponse, ModelInfo, ModelsListResponse
+from ..models.schemas import GPUMetricsResponse, HealthResponse, ModelInfo, ModelsListResponse
+
+# Optional GPU monitoring via nvidia-ml-py
+try:
+    import pynvml
+    PYNVML_AVAILABLE = True
+except ImportError:
+    PYNVML_AVAILABLE = False
+    logger.info("pynvml not available - GPU metrics will use torch fallback")
 
 router = APIRouter()
 
@@ -114,6 +122,133 @@ async def service_info():
             "regime": "Regime-Vorhersage (4 Klassen)"
         }
     }
+
+
+@router.get("/gpu", response_model=GPUMetricsResponse, tags=["1. System"])
+async def get_gpu_metrics():
+    """
+    Detaillierte GPU-Metriken fuer Watchdog-Integration.
+
+    Dieser Endpoint wird vom Watchdog Service verwendet, um GPU-Ressourcen
+    zu ueberwachen, wenn der Watchdog selbst keinen direkten GPU-Zugang hat.
+
+    Verwendet pynvml (nvidia-ml-py) fuer detaillierte Metriken, mit PyTorch
+    als Fallback fuer grundlegende Informationen.
+    """
+    timestamp = datetime.now(timezone.utc)
+
+    # Try pynvml first for detailed metrics
+    if PYNVML_AVAILABLE:
+        try:
+            pynvml.nvmlInit()
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+
+            # Get GPU name
+            name = pynvml.nvmlDeviceGetName(handle)
+            if isinstance(name, bytes):
+                name = name.decode('utf-8')
+
+            # Get memory info
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            memory_total_mb = mem_info.total / (1024 * 1024)
+            memory_used_mb = mem_info.used / (1024 * 1024)
+            memory_free_mb = mem_info.free / (1024 * 1024)
+            memory_percent = (mem_info.used / mem_info.total) * 100
+
+            # Get utilization
+            try:
+                util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+                gpu_utilization = util.gpu
+            except pynvml.NVMLError:
+                gpu_utilization = 0.0
+
+            # Get temperature
+            try:
+                temperature = pynvml.nvmlDeviceGetTemperature(
+                    handle, pynvml.NVML_TEMPERATURE_GPU
+                )
+            except pynvml.NVMLError:
+                temperature = 0.0
+
+            # Get power usage
+            try:
+                power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000  # mW to W
+            except pynvml.NVMLError:
+                power = 0.0
+
+            pynvml.nvmlShutdown()
+
+            return GPUMetricsResponse(
+                available=True,
+                index=0,
+                name=name,
+                memory_total_mb=round(memory_total_mb, 2),
+                memory_used_mb=round(memory_used_mb, 2),
+                memory_free_mb=round(memory_free_mb, 2),
+                memory_percent=round(memory_percent, 1),
+                utilization_percent=round(gpu_utilization, 1),
+                temperature_celsius=round(temperature, 1),
+                power_usage_watts=round(power, 1),
+                is_healthy=True,
+                error_message=None,
+                timestamp=timestamp,
+                source="pynvml"
+            )
+
+        except Exception as e:
+            logger.warning(f"pynvml error, falling back to torch: {e}")
+            # Fall through to torch fallback
+
+    # PyTorch fallback - limited metrics but better than nothing
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            props = torch.cuda.get_device_properties(0)
+            memory_total_mb = props.total_memory / (1024 * 1024)
+
+            # Get current memory usage via torch
+            memory_allocated_mb = torch.cuda.memory_allocated(0) / (1024 * 1024)
+            memory_reserved_mb = torch.cuda.memory_reserved(0) / (1024 * 1024)
+            memory_free_mb = memory_total_mb - memory_reserved_mb
+            memory_percent = (memory_reserved_mb / memory_total_mb) * 100
+
+            return GPUMetricsResponse(
+                available=True,
+                index=0,
+                name=gpu_name,
+                memory_total_mb=round(memory_total_mb, 2),
+                memory_used_mb=round(memory_reserved_mb, 2),
+                memory_free_mb=round(memory_free_mb, 2),
+                memory_percent=round(memory_percent, 1),
+                utilization_percent=0.0,  # Not available via torch
+                temperature_celsius=0.0,  # Not available via torch
+                power_usage_watts=0.0,  # Not available via torch
+                is_healthy=True,
+                error_message="Limited metrics (torch fallback)",
+                timestamp=timestamp,
+                source="torch"
+            )
+    except Exception as e:
+        logger.warning(f"GPU metrics unavailable: {e}")
+
+    # No GPU available
+    return GPUMetricsResponse(
+        available=False,
+        index=0,
+        name="None",
+        memory_total_mb=0.0,
+        memory_used_mb=0.0,
+        memory_free_mb=0.0,
+        memory_percent=0.0,
+        utilization_percent=0.0,
+        temperature_celsius=0.0,
+        power_usage_watts=0.0,
+        is_healthy=False,
+        error_message="No GPU detected",
+        timestamp=timestamp,
+        source="none"
+    )
 
 
 # =============================================================================

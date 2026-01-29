@@ -3,6 +3,7 @@ Resource Monitor Service for host protection.
 
 Uses psutil for system resource monitoring.
 Uses pynvml (nvidia-ml-py) for GPU monitoring.
+Falls back to fetching GPU metrics from a GPU-enabled service (e.g., CNN-LSTM).
 Provides CPU, memory, and GPU utilization metrics.
 Prevents training from starting when resources are constrained.
 """
@@ -12,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
+import httpx
 import psutil
 from loguru import logger
 
@@ -21,7 +23,7 @@ try:
     PYNVML_AVAILABLE = True
 except ImportError:
     PYNVML_AVAILABLE = False
-    logger.info("pynvml not available - GPU monitoring disabled")
+    logger.info("pynvml not available - will fetch GPU metrics from remote service")
 
 
 @dataclass
@@ -108,6 +110,8 @@ class ResourceMonitor:
         gpu_temp_warning: float = 75.0,
         gpu_temp_critical: float = 85.0,
         poll_interval: float = 5.0,
+        gpu_metrics_service_url: Optional[str] = None,
+        gpu_metrics_timeout: float = 5.0,
     ):
         """
         Initialize resource monitor with GPU support.
@@ -122,6 +126,8 @@ class ResourceMonitor:
             gpu_temp_warning: GPU temperature threshold for warning (°C)
             gpu_temp_critical: GPU temperature threshold for critical (°C)
             poll_interval: Seconds between background monitoring checks
+            gpu_metrics_service_url: URL to fetch GPU metrics from (fallback if pynvml unavailable)
+            gpu_metrics_timeout: Timeout for remote GPU metrics fetch
         """
         self.cpu_warning = cpu_warning
         self.cpu_critical = cpu_critical
@@ -132,6 +138,8 @@ class ResourceMonitor:
         self.gpu_temp_warning = gpu_temp_warning
         self.gpu_temp_critical = gpu_temp_critical
         self.poll_interval = poll_interval
+        self.gpu_metrics_service_url = gpu_metrics_service_url
+        self.gpu_metrics_timeout = gpu_metrics_timeout
 
         self._latest_metrics: Optional[ResourceMetrics] = None
         self._running = False
@@ -139,6 +147,9 @@ class ResourceMonitor:
         self._callbacks: list[Callable] = []
         self._last_alert_level: Optional[str] = None
         self._nvml_initialized = False
+        self._remote_gpu_available = False
+        self._last_remote_gpu_check: Optional[datetime] = None
+        self._cached_remote_gpu: Optional[GPUMetrics] = None
 
         # Initialize NVML for GPU monitoring
         self._init_nvml()
@@ -251,9 +262,115 @@ class ResourceMonitor:
                 error_message=str(e),
             )
 
+    async def _fetch_remote_gpu_metrics(self) -> Optional[GPUMetrics]:
+        """
+        Fetch GPU metrics from a remote service (e.g., CNN-LSTM).
+
+        Used as fallback when pynvml is not available locally.
+        Caches results for 5 seconds to reduce HTTP overhead.
+
+        Returns:
+            GPUMetrics or None if unavailable
+        """
+        if not self.gpu_metrics_service_url:
+            return None
+
+        # Check cache (5 second TTL)
+        now = datetime.now(timezone.utc)
+        if (
+            self._cached_remote_gpu is not None
+            and self._last_remote_gpu_check is not None
+            and (now - self._last_remote_gpu_check).total_seconds() < 5
+        ):
+            return self._cached_remote_gpu
+
+        try:
+            async with httpx.AsyncClient(timeout=self.gpu_metrics_timeout) as client:
+                response = await client.get(f"{self.gpu_metrics_service_url}/api/v1/gpu")
+
+                if response.status_code == 200:
+                    data = response.json()
+
+                    if not data.get("available", False):
+                        self._remote_gpu_available = False
+                        self._cached_remote_gpu = None
+                        return None
+
+                    self._remote_gpu_available = True
+                    gpu_metrics = GPUMetrics(
+                        gpu_index=data.get("index", 0),
+                        name=data.get("name", "Unknown"),
+                        memory_total_mb=data.get("memory_total_mb", 0.0),
+                        memory_used_mb=data.get("memory_used_mb", 0.0),
+                        memory_free_mb=data.get("memory_free_mb", 0.0),
+                        memory_percent=data.get("memory_percent", 0.0),
+                        gpu_utilization=data.get("utilization_percent", 0.0),
+                        temperature_celsius=data.get("temperature_celsius", 0.0),
+                        power_usage_watts=data.get("power_usage_watts", 0.0),
+                        is_healthy=data.get("is_healthy", True),
+                        error_message=data.get("error_message"),
+                    )
+
+                    # Update cache
+                    self._cached_remote_gpu = gpu_metrics
+                    self._last_remote_gpu_check = now
+
+                    logger.debug(
+                        f"Remote GPU metrics: {gpu_metrics.name}, "
+                        f"Memory: {gpu_metrics.memory_percent:.1f}%, "
+                        f"Util: {gpu_metrics.gpu_utilization:.1f}%"
+                    )
+                    return gpu_metrics
+
+        except httpx.TimeoutException:
+            logger.warning(
+                f"Timeout fetching GPU metrics from {self.gpu_metrics_service_url}"
+            )
+        except httpx.RequestError as e:
+            logger.warning(f"Error fetching remote GPU metrics: {e}")
+        except Exception as e:
+            logger.warning(f"Unexpected error fetching remote GPU metrics: {e}")
+
+        self._remote_gpu_available = False
+        self._cached_remote_gpu = None
+        return None
+
+    def _fetch_remote_gpu_metrics_sync(self) -> Optional[GPUMetrics]:
+        """
+        Synchronous wrapper for remote GPU metrics fetch.
+
+        Creates an event loop if needed for synchronous contexts.
+        """
+        # Check cache first (avoid async call if possible)
+        now = datetime.now(timezone.utc)
+        if (
+            self._cached_remote_gpu is not None
+            and self._last_remote_gpu_check is not None
+            and (now - self._last_remote_gpu_check).total_seconds() < 5
+        ):
+            return self._cached_remote_gpu
+
+        try:
+            # Try to get existing event loop
+            loop = asyncio.get_running_loop()
+            # If we're in an async context, we can't run sync
+            # Return cached value or None
+            return self._cached_remote_gpu
+        except RuntimeError:
+            # No running loop - create a new one
+            try:
+                return asyncio.run(self._fetch_remote_gpu_metrics())
+            except Exception as e:
+                logger.warning(f"Sync remote GPU fetch failed: {e}")
+                return None
+
     def get_metrics(self) -> ResourceMetrics:
         """
         Get current resource metrics including GPU (synchronous).
+
+        GPU metrics are obtained from:
+        1. Local pynvml (if available)
+        2. Remote GPU service (fallback when pynvml unavailable)
 
         Returns:
             ResourceMetrics with current system state including GPU
@@ -269,8 +386,54 @@ class ResourceMonitor:
         # System load average (1, 5, 15 minutes)
         load = psutil.getloadavg()
 
-        # GPU metrics (if available)
-        gpu_metrics = self._get_gpu_metrics(gpu_index=0)
+        # GPU metrics - try local first, then remote
+        gpu_metrics = None
+        if self._nvml_initialized:
+            gpu_metrics = self._get_gpu_metrics(gpu_index=0)
+        elif self.gpu_metrics_service_url:
+            # Fallback to remote GPU metrics
+            gpu_metrics = self._fetch_remote_gpu_metrics_sync()
+
+        return ResourceMetrics(
+            cpu_percent=cpu_percent,
+            cpu_per_core=cpu_per_core,
+            memory_percent=memory.percent,
+            memory_used_gb=memory.used / (1024**3),
+            memory_available_gb=memory.available / (1024**3),
+            swap_percent=swap.percent,
+            load_average=load,
+            timestamp=datetime.now(timezone.utc),
+            gpu=gpu_metrics,
+        )
+
+    async def get_metrics_async(self) -> ResourceMetrics:
+        """
+        Get current resource metrics including GPU (async version).
+
+        Preferred for async contexts as it can fetch remote GPU metrics
+        without blocking.
+
+        Returns:
+            ResourceMetrics with current system state including GPU
+        """
+        # CPU percentage with short interval for accuracy
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        cpu_per_core = psutil.cpu_percent(percpu=True)
+
+        # Memory statistics
+        memory = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+
+        # System load average (1, 5, 15 minutes)
+        load = psutil.getloadavg()
+
+        # GPU metrics - try local first, then remote (async)
+        gpu_metrics = None
+        if self._nvml_initialized:
+            gpu_metrics = self._get_gpu_metrics(gpu_index=0)
+        elif self.gpu_metrics_service_url:
+            # Async fetch from remote GPU service
+            gpu_metrics = await self._fetch_remote_gpu_metrics()
 
         return ResourceMetrics(
             cpu_percent=cpu_percent,
@@ -373,7 +536,8 @@ class ResourceMonitor:
         """Background loop for continuous monitoring."""
         while self._running:
             try:
-                self._latest_metrics = self.get_metrics()
+                # Use async version for better performance with remote GPU
+                self._latest_metrics = await self.get_metrics_async()
 
                 # Determine current alert level
                 current_level = None
@@ -451,6 +615,9 @@ class ResourceMonitor:
 
         # Add GPU metrics if available
         if metrics.gpu is not None:
+            # Determine source of GPU metrics
+            gpu_source = "local (pynvml)" if self._nvml_initialized else "remote (cnn-lstm)"
+
             result["gpu"] = {
                 "index": metrics.gpu.gpu_index,
                 "name": metrics.gpu.name,
@@ -463,10 +630,14 @@ class ResourceMonitor:
                 "power_usage_watts": metrics.gpu.power_usage_watts,
                 "is_healthy": metrics.gpu.is_healthy,
                 "error_message": metrics.gpu.error_message,
+                "source": gpu_source,
             }
         else:
             result["gpu"] = None
             result["gpu_monitoring_available"] = PYNVML_AVAILABLE
+            result["gpu_remote_available"] = self._remote_gpu_available
+            if self.gpu_metrics_service_url and not self._nvml_initialized:
+                result["gpu_metrics_source"] = self.gpu_metrics_service_url
 
         return result
 
