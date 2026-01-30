@@ -228,6 +228,8 @@ class TradingChart {
                 borderColor: this.theme.border,
                 timeVisible: true,
                 secondsVisible: false,
+                rightOffset: 5,  // Abstand zum rechten Rand (Anzahl Kerzen)
+                minBarSpacing: 3,
             },
             crosshair: {
                 mode: LightweightCharts.CrosshairMode.Normal,
