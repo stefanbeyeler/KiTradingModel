@@ -2904,26 +2904,29 @@
             const directionColor = setup.direction === 'long' ? '#34d399' :
                                   setup.direction === 'short' ? '#f87171' : '#fbbf24';
 
+            const scoreColor = scoreClass === 'high' ? '#34d399' : scoreClass === 'moderate' ? '#fbbf24' : '#9ca3af';
+
             return `
                 <div class="consolidated-section">
                     <h3 class="section-title"><span class="icon">📊</span> Übersicht</h3>
-                    <div class="score-meter" style="margin-bottom: 0.5rem;">
-                        <div class="score-bar">
-                            <div class="score-bar-fill ${scoreClass}" style="width: ${setup.composite_score}%"></div>
-                        </div>
-                        <span class="score-value-large" style="color: ${scoreClass === 'high' ? '#34d399' : scoreClass === 'moderate' ? '#fbbf24' : '#9ca3af'}">${setup.composite_score.toFixed(1)}</span>
-                    </div>
 
                     <div class="overview-two-columns">
                         <!-- Linke Spalte: Info + Key Drivers -->
                         <div class="overview-left">
-                            <div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                            <div class="detail-grid" style="grid-template-columns: 1fr 0.8fr 1fr 0.8fr;">
                                 <div class="detail-card">
                                     <div class="detail-card-title">Richtung</div>
                                     <div class="detail-card-value" style="color: ${directionColor}">
                                         ${directionIcon} ${setup.direction.toUpperCase()}
                                     </div>
                                     <div class="detail-card-sub">${setup.signal_alignment}</div>
+                                </div>
+
+                                <div class="detail-card score-card" style="border: 1px solid ${scoreColor}40; background: ${scoreColor}10;">
+                                    <div class="detail-card-title">Score</div>
+                                    <div class="detail-card-value" style="color: ${scoreColor}; font-size: 1.3rem; font-weight: 700;">
+                                        ${setup.composite_score.toFixed(1)}
+                                    </div>
                                 </div>
 
                                 <div class="detail-card">
