@@ -561,6 +561,17 @@
             gap: 0.5rem;
         }
 
+        .setup-age {
+            font-family: 'Courier New', monospace;
+            font-size: 0.6rem;
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            opacity: 1;
+            font-weight: 600;
+        }
+
         .setup-id {
             font-family: 'Courier New', monospace;
             font-size: 0.55rem;
@@ -921,106 +932,97 @@
         }
 
         .detail-content {
-            padding: 0.3rem;
+            padding: 0.6rem 0.8rem;
             height: calc(90vh - 2.5rem);
             overflow: hidden;
             display: flex;
             flex-direction: column;
         }
 
-        /* 2-Column Layout: Links Signale+Patterns, Rechts LLM */
+        /* Single-Column Layout: Alles untereinander, volle Breite */
         .detail-columns {
-            display: grid;
-            grid-template-columns: 40% 60%;
-            grid-template-rows: 1fr;
-            gap: 0.4rem;
-            flex: 1;
-            min-height: 0;
-            align-items: stretch;
-        }
-
-        @media (max-width: 900px) {
-            .detail-columns {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Linke Spalte: Kompakt, nur benötigter Platz */
-        .detail-column {
             display: flex;
             flex-direction: column;
-            gap: 0.2rem;
-            align-self: start;
-            max-height: 100%;
+            gap: 0.5rem;
+            flex: 1;
+            min-height: 0;
             overflow-y: auto;
         }
 
-        /* LLM Column: Volle Höhe für Analyse-Text */
+        /* Hauptinhalt: Volle Breite */
+        .detail-column {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            width: 100%;
+        }
+
+        /* LLM Column: Am Ende, mit mehr Platz */
         .detail-column.llm-column {
-            align-self: stretch;
-            height: 100%;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .detail-column.llm-column .consolidated-section {
-            flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 0;
-            height: 100%;
+            min-height: 200px;
         }
 
         .detail-column.llm-column #llmContent {
             flex: 1;
             overflow-y: auto;
+            max-height: 400px;
         }
 
         .detail-column.llm-column .llm-analysis-box {
-            max-height: none;
+            max-height: 350px;
         }
 
-        /* Consolidated Section Styles - Ultra-Kompakt */
+        /* Consolidated Section Styles - Volle Breite */
         .consolidated-section {
             margin-bottom: 0;
             background: rgba(0, 0, 0, 0.15);
-            border-radius: 4px;
-            padding: 0.25rem 0.4rem;
+            border-radius: 6px;
+            padding: 0.5rem 0.6rem;
         }
 
         .section-title {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             color: #10b981;
-            margin-bottom: 0.2rem;
-            padding-bottom: 0.15rem;
+            margin-bottom: 0.35rem;
+            padding-bottom: 0.25rem;
             border-bottom: 1px solid rgba(16, 185, 129, 0.3);
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.3rem;
         }
 
         .section-title .icon {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
         }
 
         /* Setup-ID Display im Detail Modal */
         .setup-id-display {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-            margin-bottom: 0.4rem;
-            padding: 0.2rem 0.4rem;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding: 0.35rem 0.5rem;
             background: rgba(100, 200, 255, 0.1);
             border: 1px solid rgba(100, 200, 255, 0.2);
-            border-radius: 4px;
+            border-radius: 5px;
         }
 
         .setup-id-label {
-            font-size: 0.65rem;
+            font-size: 0.75rem;
             color: #9ca3af;
         }
 
         .setup-id-value {
             font-family: 'Courier New', monospace;
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             color: #64c8ff;
             font-weight: 600;
         }
@@ -1051,34 +1053,34 @@
             font-size: 0.7rem;
         }
 
-        /* Detail Sections - Ultra-Kompakt */
+        /* Detail Sections - Volle Breite */
         .detail-section {
-            margin-bottom: 0.15rem;
+            margin-bottom: 0.3rem;
         }
 
         .detail-section h4 {
-            font-size: 0.65rem;
+            font-size: 0.75rem;
             color: #64c8ff;
-            margin-bottom: 0.15rem;
+            margin-bottom: 0.25rem;
             display: flex;
             align-items: center;
-            gap: 0.2rem;
+            gap: 0.3rem;
         }
 
         .detail-section h4 .icon {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
         }
 
         .detail-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-            gap: 0.2rem;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.4rem;
         }
 
         .detail-card {
             background: rgba(0, 0, 0, 0.25);
-            border-radius: 3px;
-            padding: 0.2rem 0.3rem;
+            border-radius: 4px;
+            padding: 0.4rem 0.5rem;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
@@ -1090,16 +1092,16 @@
         }
 
         .detail-card-title {
-            font-size: 0.55rem;
+            font-size: 0.65rem;
             color: #94a3b8;
             text-transform: uppercase;
-            letter-spacing: 0.2px;
+            letter-spacing: 0.3px;
         }
 
         .detail-card-badge {
-            padding: 0.05rem 0.2rem;
-            border-radius: 2px;
-            font-size: 0.55rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-size: 0.6rem;
             font-weight: 600;
         }
 
@@ -1114,31 +1116,31 @@
         }
 
         .detail-card-value {
-            font-size: 0.8rem;
+            font-size: 0.95rem;
             font-weight: 600;
-            margin-bottom: 0.05rem;
-            line-height: 1.1;
+            margin-bottom: 0.1rem;
+            line-height: 1.2;
         }
 
         .detail-card-sub {
-            font-size: 0.55rem;
+            font-size: 0.65rem;
             color: #94a3b8;
-            line-height: 1.2;
+            line-height: 1.3;
         }
 
         /* Pattern List */
         .pattern-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.15rem;
-            margin-top: 0.15rem;
+            gap: 0.25rem;
+            margin-top: 0.2rem;
         }
 
         .pattern-tag {
-            padding: 0.1rem 0.25rem;
+            padding: 0.2rem 0.4rem;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            font-size: 0.55rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
         }
 
         .pattern-tag.bullish {
@@ -1149,6 +1151,62 @@
         .pattern-tag.bearish {
             background: rgba(239, 68, 68, 0.2);
             color: #f87171;
+        }
+
+        /* Copyable Price - Click to copy */
+        .copyable-price {
+            transition: all 0.15s ease;
+            border-radius: 3px;
+            padding: 0.1rem 0.2rem;
+            margin: -0.1rem -0.2rem;
+        }
+
+        .copyable-price:hover {
+            background: rgba(100, 200, 255, 0.15);
+            transform: scale(1.02);
+        }
+
+        .copyable-price:active {
+            transform: scale(0.98);
+        }
+
+        /* Copy Toast Notification */
+        .copy-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 39, 64, 0.95);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            color: #e8e8e8;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            z-index: 10000;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .copy-toast.fade-out {
+            animation: fadeOut 0.3s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-10px);
+            }
         }
 
         /* LLM Analysis Box */
@@ -2287,6 +2345,25 @@
             return '▶';
         }
 
+        // Setup-Alter formatieren (Minuten seit Erkennung)
+        function formatSetupAge(timestamp) {
+            if (!timestamp) return '';
+            const now = new Date();
+            const setupTime = new Date(timestamp);
+            const diffMs = now - setupTime;
+            const diffMinutes = Math.floor(diffMs / 60000);
+
+            if (diffMinutes < 1) return '<1m';
+            if (diffMinutes < 60) return `${diffMinutes}m`;
+            if (diffMinutes < 1440) {
+                const hours = Math.floor(diffMinutes / 60);
+                const mins = diffMinutes % 60;
+                return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+            }
+            const days = Math.floor(diffMinutes / 1440);
+            return `${days}d`;
+        }
+
         function createSetupCard(setup) {
             const scoreClass = setup.composite_score >= 75 ? 'high' :
                               setup.composite_score >= 60 ? 'moderate' : 'low';
@@ -2324,7 +2401,7 @@
                         ${signals.map(s => `<span class="signal-tag ${s.available ? 'available' : ''}" title="${s.tooltip}">${s.name}</span>`).join('')}
                     </div>
                     <div class="setup-meta">
-                        <span class="setup-id" title="Setup-ID: ${setup.setup_id || ''}">${setup.setup_id ? setup.setup_id.split('-').slice(-2).join('-') : ''}</span>
+                        <span class="setup-age" title="Alter seit Erkennung: ${setup.timestamp ? new Date(setup.timestamp).toLocaleString('de-CH') : ''}">${formatSetupAge(setup.timestamp)}</span>
                         <span>${setup.timeframe} | ${setup.confidence_level}</span>
                         <button class="setup-detail-btn" onclick="event.stopPropagation(); openDetailModal('${setup.symbol}', '${setup.timeframe}')" title="Alle Details anzeigen">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2757,26 +2834,24 @@
             }
 
             const levels = setup.entry_exit_levels;
-            const direction = setup.direction;
-            const isLong = direction === 'long';
+            const currentPrice = setup.current_price;
 
             return `
                 <div style="margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <div class="detail-card-title" style="margin-bottom: 0.3rem;">
+                    <div class="detail-card-title" style="margin-bottom: 0.4rem;">
                         <span style="color: #a78bfa;">🎯</span> Entry/Exit Levels
+                        <span style="font-size: 0.6rem; opacity: 0.6; margin-left: 0.5rem;">(Klick zum Kopieren)</span>
                     </div>
-                    <div class="detail-grid" style="grid-template-columns: repeat(3, 1fr);">
+
+                    <!-- Zeile 1: Entry / Actual Price / R:R -->
+                    <div class="detail-grid" style="grid-template-columns: 1fr 1fr 0.6fr; margin-bottom: 0.3rem;">
                         <div class="detail-card">
                             <div class="detail-card-title">Entry</div>
-                            <div class="detail-card-value" style="color: #64c8ff;">
-                                ${levels.entry_price ? formatDetailPrice(levels.entry_price) : '-'}
-                            </div>
+                            ${renderCopyablePrice(levels.entry_price, '#64c8ff')}
                         </div>
                         <div class="detail-card">
-                            <div class="detail-card-title">Stop Loss</div>
-                            <div class="detail-card-value" style="color: #f87171;">
-                                ${levels.stop_loss ? formatDetailPrice(levels.stop_loss) : '-'}
-                            </div>
+                            <div class="detail-card-title">Aktueller Preis</div>
+                            ${renderCopyablePrice(currentPrice, '#fbbf24')}
                         </div>
                         <div class="detail-card">
                             <div class="detail-card-title">R:R</div>
@@ -2785,28 +2860,88 @@
                             </div>
                         </div>
                     </div>
-                    <div class="detail-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 0.3rem;">
+
+                    <!-- Zeile 2: Stop Loss -->
+                    <div class="detail-grid" style="grid-template-columns: 1fr; margin-bottom: 0.3rem;">
+                        <div class="detail-card">
+                            <div class="detail-card-title">Stop Loss</div>
+                            ${renderCopyablePrice(levels.stop_loss, '#f87171')}
+                        </div>
+                    </div>
+
+                    <!-- Zeile 3: TP1 / TP2 / TP3 -->
+                    <div class="detail-grid" style="grid-template-columns: repeat(3, 1fr);">
                         <div class="detail-card">
                             <div class="detail-card-title">TP1</div>
-                            <div class="detail-card-value" style="color: #34d399;">
-                                ${levels.take_profit_1 ? formatDetailPrice(levels.take_profit_1) : '-'}
-                            </div>
+                            ${renderCopyablePrice(levels.take_profit_1, '#34d399')}
                         </div>
                         <div class="detail-card">
                             <div class="detail-card-title">TP2</div>
-                            <div class="detail-card-value" style="color: #34d399;">
-                                ${levels.take_profit_2 ? formatDetailPrice(levels.take_profit_2) : '-'}
-                            </div>
+                            ${renderCopyablePrice(levels.take_profit_2, '#34d399')}
                         </div>
                         <div class="detail-card">
                             <div class="detail-card-title">TP3</div>
-                            <div class="detail-card-value" style="color: #34d399;">
-                                ${levels.take_profit_3 ? formatDetailPrice(levels.take_profit_3) : '-'}
-                            </div>
+                            ${renderCopyablePrice(levels.take_profit_3, '#34d399')}
                         </div>
                     </div>
                 </div>
             `;
+        }
+
+        function renderCopyablePrice(price, color) {
+            if (!price) {
+                return `<div class="detail-card-value" style="color: ${color};">-</div>`;
+            }
+            // Raw value without thousand separators for clipboard
+            const rawValue = getRawPriceString(price);
+            return `
+                <div class="detail-card-value copyable-price"
+                     style="color: ${color}; cursor: pointer;"
+                     onclick="copyToClipboard('${rawValue}')"
+                     title="Klicken zum Kopieren: ${rawValue}">
+                    ${formatDetailPrice(price)}
+                </div>
+            `;
+        }
+
+        function getRawPriceString(price) {
+            if (!price) return '';
+            // Return raw number without thousand separators
+            if (price > 1000) return price.toFixed(0);
+            if (price > 10) return price.toFixed(2);
+            if (price > 0.01) return price.toFixed(4);
+            return price.toFixed(6);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback
+                showCopyFeedback(text);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showCopyFeedback(text);
+            });
+        }
+
+        function showCopyFeedback(text) {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = 'copy-toast';
+            toast.innerHTML = `<span style="color: #34d399;">✓</span> ${text} kopiert`;
+            document.body.appendChild(toast);
+
+            // Remove after animation
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 1500);
         }
 
         function formatDetailPrice(price) {
