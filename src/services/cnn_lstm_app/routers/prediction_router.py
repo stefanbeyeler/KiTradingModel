@@ -29,10 +29,13 @@ async def _track_prediction_async(prediction_data: dict):
     """Send prediction to outcome tracker in background."""
     try:
         from ..services.outcome_tracker_service import outcome_tracker_service
-        await outcome_tracker_service.track_prediction(prediction_data)
-        logger.debug(f"Tracked prediction {prediction_data.get('prediction_id')}")
+        result = await outcome_tracker_service.track_prediction(prediction_data)
+        if result:
+            logger.info(f"Self-Learning: Tracked prediction {prediction_data.get('prediction_id')} for {prediction_data.get('symbol')}")
+        else:
+            logger.warning(f"Self-Learning: Failed to track prediction {prediction_data.get('prediction_id')}")
     except Exception as e:
-        logger.debug(f"Could not track prediction: {e}")
+        logger.error(f"Self-Learning: Error tracking prediction: {e}")
 
 
 # =============================================================================
@@ -42,8 +45,8 @@ async def _track_prediction_async(prediction_data: dict):
 @router.get("/predict/{symbol}", response_model=PredictionResponse, tags=["2. Predictions"])
 async def predict_all(
     symbol: str,
+    background_tasks: BackgroundTasks,
     timeframe: str = Query(default="H1", description="Timeframe (M1-MN)"),
-    background_tasks: BackgroundTasks = None
 ):
     """
     Kombinierte Multi-Task Vorhersage.
@@ -70,29 +73,29 @@ async def predict_all(
         )
 
     # Track prediction for outcome evaluation (Self-Learning)
-    if background_tasks:
-        prediction_id = f"pred_{symbol.upper()}_{timeframe.upper()}_{uuid.uuid4().hex[:8]}"
-        prediction_data = {
-            "prediction_id": prediction_id,
-            "symbol": symbol.upper(),
-            "timeframe": timeframe.upper(),
-            "price_prediction": {
-                "direction": result.predictions.price.direction.value,
-                "confidence": result.predictions.price.confidence,
-                "horizons": {h.horizon: h.change_percent for h in result.predictions.price.horizons}
-            },
-            "pattern_predictions": [
-                {"type": p.type.value, "confidence": p.confidence, "direction": p.direction.value}
-                for p in result.predictions.patterns
-            ],
-            "regime_prediction": {
-                "current": result.predictions.regime.current.value,
-                "confidence": result.predictions.regime.confidence
-            },
-            "model_version": result.model_version,
-            "timestamp": result.timestamp.isoformat() if result.timestamp else datetime.now(timezone.utc).isoformat()
-        }
-        background_tasks.add_task(_track_prediction_async, prediction_data)
+    prediction_id = f"pred_{symbol.upper()}_{timeframe.upper()}_{uuid.uuid4().hex[:8]}"
+    prediction_data = {
+        "prediction_id": prediction_id,
+        "symbol": symbol.upper(),
+        "timeframe": timeframe.upper(),
+        "price_at_prediction": result.predictions.price.current,
+        "price_prediction": {
+            "direction": result.predictions.price.direction.value,
+            "confidence": result.predictions.price.confidence,
+            "change_percent": result.predictions.price.change_percent_1d or 0.0,
+        },
+        "pattern_prediction": {
+            "detected_patterns": [p.type.value for p in result.predictions.patterns],
+            "confidence": max((p.confidence for p in result.predictions.patterns), default=0.5),
+        },
+        "regime_prediction": {
+            "regime": result.predictions.regime.current.value,
+            "confidence": result.predictions.regime.probability
+        },
+        "model_version": result.model_version,
+        "timestamp": result.timestamp.isoformat() if result.timestamp else datetime.now(timezone.utc).isoformat()
+    }
+    background_tasks.add_task(_track_prediction_async, prediction_data)
 
     return result
 
@@ -222,7 +225,7 @@ async def predict_regime(
 # =============================================================================
 
 @router.post("/batch", response_model=BatchPredictionResponse, tags=["2. Predictions"])
-async def batch_predict(request: BatchPredictionRequest, background_tasks: BackgroundTasks = None):
+async def batch_predict(request: BatchPredictionRequest, background_tasks: BackgroundTasks):
     """
     Batch-Vorhersage fuer mehrere Symbole.
 
@@ -312,8 +315,8 @@ async def batch_predict(request: BatchPredictionRequest, background_tasks: Backg
 @router.get("/analysis/{symbol}", tags=["2. Predictions"])
 async def full_analysis(
     symbol: str,
+    background_tasks: BackgroundTasks,
     timeframe: str = Query(default="H1", description="Timeframe"),
-    background_tasks: BackgroundTasks = None
 ):
     """
     Vollstaendige Analyse mit zusaetzlichen Insights.
@@ -337,29 +340,29 @@ async def full_analysis(
         )
 
     # Track prediction for outcome evaluation (Self-Learning)
-    if background_tasks:
-        prediction_id = f"pred_{symbol.upper()}_{timeframe.upper()}_{uuid.uuid4().hex[:8]}"
-        prediction_data = {
-            "prediction_id": prediction_id,
-            "symbol": symbol.upper(),
-            "timeframe": timeframe.upper(),
-            "price_prediction": {
-                "direction": result.predictions.price.direction.value,
-                "confidence": result.predictions.price.confidence,
-                "horizons": {h.horizon: h.change_percent for h in result.predictions.price.horizons}
-            },
-            "pattern_predictions": [
-                {"type": p.type.value, "confidence": p.confidence, "direction": p.direction.value}
-                for p in result.predictions.patterns
-            ],
-            "regime_prediction": {
-                "current": result.predictions.regime.current.value,
-                "confidence": result.predictions.regime.confidence
-            },
-            "model_version": result.model_version,
-            "timestamp": result.timestamp.isoformat() if result.timestamp else datetime.now(timezone.utc).isoformat()
-        }
-        background_tasks.add_task(_track_prediction_async, prediction_data)
+    prediction_id = f"pred_{symbol.upper()}_{timeframe.upper()}_{uuid.uuid4().hex[:8]}"
+    prediction_data = {
+        "prediction_id": prediction_id,
+        "symbol": symbol.upper(),
+        "timeframe": timeframe.upper(),
+        "price_at_prediction": result.predictions.price.current,
+        "price_prediction": {
+            "direction": result.predictions.price.direction.value,
+            "confidence": result.predictions.price.confidence,
+            "change_percent": result.predictions.price.change_percent_1d or 0.0,
+        },
+        "pattern_prediction": {
+            "detected_patterns": [p.type.value for p in result.predictions.patterns],
+            "confidence": max((p.confidence for p in result.predictions.patterns), default=0.5),
+        },
+        "regime_prediction": {
+            "regime": result.predictions.regime.current.value,
+            "confidence": result.predictions.regime.probability
+        },
+        "model_version": result.model_version,
+        "timestamp": result.timestamp.isoformat() if result.timestamp else datetime.now(timezone.utc).isoformat()
+    }
+    background_tasks.add_task(_track_prediction_async, prediction_data)
 
     # Generiere Insights
     insights = []
