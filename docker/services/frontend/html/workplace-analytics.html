@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Workplace - Setup Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .back-link {
+            color: #64c8ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+        }
+
+        .btn-secondary {
+            background: rgba(100, 200, 255, 0.15);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            color: #64c8ff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(100, 200, 255, 0.25);
+        }
+
+        /* Summary Stats */
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-card .stat-value.success { color: #10b981; }
+        .stat-card .stat-value.warning { color: #f59e0b; }
+        .stat-card .stat-value.danger { color: #ef4444; }
+
+        .stat-card .stat-label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        /* Filter Section */
+        .filters-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .filters-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 0.6rem;
+            background: #1a1a2e;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 6px;
+            color: #e8e8e8;
+            font-size: 0.85rem;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        /* Analytics Grid */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1200px) {
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .analytics-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .analytics-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64c8ff;
+        }
+
+        .card-header .card-info {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .chart-container.small {
+            height: 200px;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table td {
+            padding: 0.75rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .accuracy-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .accuracy-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .accuracy-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .accuracy-bar-fill.high { background: linear-gradient(90deg, #10b981, #34d399); }
+        .accuracy-bar-fill.medium { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .accuracy-bar-fill.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+        .accuracy-value {
+            min-width: 50px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .accuracy-value.high { color: #10b981; }
+        .accuracy-value.medium { color: #f59e0b; }
+        .accuracy-value.low { color: #ef4444; }
+
+        .count-badge {
+            font-size: 0.75rem;
+            color: #64748b;
+            padding: 0.15rem 0.4rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        /* Signal Performance */
+        .signal-performance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .signal-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .signal-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .signal-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .signal-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .signal-stat {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signal-stat .label {
+            color: #64748b;
+        }
+
+        .signal-stat .value {
+            font-weight: 500;
+        }
+
+        /* Key Drivers Section */
+        .key-drivers-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .key-driver-tag {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(100, 200, 255, 0.1);
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .key-driver-tag .driver-name {
+            color: #e8e8e8;
+        }
+
+        .key-driver-tag .driver-accuracy {
+            font-weight: 600;
+        }
+
+        .key-driver-tag .driver-accuracy.high { color: #10b981; }
+        .key-driver-tag .driver-accuracy.medium { color: #f59e0b; }
+        .key-driver-tag .driver-accuracy.low { color: #ef4444; }
+
+        /* Insights Section */
+        .insights-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(100, 200, 255, 0.1));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .insight-item:last-child {
+            border-bottom: none;
+        }
+
+        .insight-icon {
+            font-size: 1.25rem;
+        }
+
+        .insight-text {
+            flex: 1;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .insight-text strong {
+            color: #64c8ff;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #94a3b8;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(16, 185, 129, 0.2);
+            border-top-color: #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .empty-state h3 {
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Scrollable table wrapper */
+        .table-wrapper {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .table-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(100, 200, 255, 0.3);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-left">
+                <a href="workplace-journal.html" class="back-link">&larr; Journal</a>
+            </div>
+            <h1>Setup Analytics</h1>
+            <div class="header-right">
+                <button class="btn btn-secondary" onclick="loadAnalytics()">Aktualisieren</button>
+                <a href="workplace.html" class="btn btn-secondary">Workplace</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Summary Stats -->
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalEvaluated">-</div>
+                <div class="stat-label">Ausgewertete Setups</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalCorrect">-</div>
+                <div class="stat-label">Korrekte Setups</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value success" id="overallAccuracy">-</div>
+                <div class="stat-label">Gesamt-Trefferquote</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="bestCategory">-</div>
+                <div class="stat-label">Beste Kategorie</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-card">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label>Symbol</label>
+                    <select id="filterSymbol" onchange="loadAnalytics()">
+                        <option value="">Alle Symbole</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Timeframe</label>
+                    <select id="filterTimeframe" onchange="loadAnalytics()">
+                        <option value="">Alle</option>
+                        <option value="M1">M1</option>
+                        <option value="M5">M5</option>
+                        <option value="M15">M15</option>
+                        <option value="M30">M30</option>
+                        <option value="H1">H1</option>
+                        <option value="H4">H4</option>
+                        <option value="D1">D1</option>
+                        <option value="W1">W1</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Zeitraum</label>
+                    <select id="filterDays" onchange="loadAnalytics()">
+                        <option value="7">Letzte 7 Tage</option>
+                        <option value="30" selected>Letzte 30 Tage</option>
+                        <option value="90">Letzte 90 Tage</option>
+                        <option value="180">Letzte 180 Tage</option>
+                        <option value="365">Letztes Jahr</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="analyticsContent">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Lade Analytics...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WORKPLACE_URL = '/workplace';
+        const DATA_SERVICE_URL = '/data';
+
+        let analyticsData = null;
+        let charts = {};
+
+        async function init() {
+            await loadSymbols();
+            await loadAnalytics();
+        }
+
+        async function loadSymbols() {
+            try {
+                const response = await fetch(`${DATA_SERVICE_URL}/api/v1/db/coverage`);
+                if (!response.ok) return;
+                const data = await response.json();
+
+                const symbols = Object.keys(data.symbols || {}).sort();
+                const select = document.getElementById('filterSymbol');
+
+                symbols.forEach(symbol => {
+                    const opt = document.createElement('option');
+                    opt.value = symbol;
+                    opt.textContent = symbol;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Fehler beim Laden der Symbole:', e);
+            }
+        }
+
+        async function loadAnalytics() {
+            const content = document.getElementById('analyticsContent');
+            content.innerHTML = `<div class="loading"><div class="loading-spinner"></div><p>Lade Analytics...</p></div>`;
+
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+
+            try {
+                const symbol = document.getElementById('filterSymbol').value;
+                const timeframe = document.getElementById('filterTimeframe').value;
+                const days = document.getElementById('filterDays').value;
+
+                const params = new URLSearchParams({ days });
+                if (symbol) params.append('symbol', symbol);
+                if (timeframe) params.append('timeframe', timeframe);
+
+                const response = await fetch(`${WORKPLACE_URL}/api/v1/scan/analytics?${params}`);
+                if (!response.ok) throw new Error('Analytics nicht verfügbar');
+
+                analyticsData = await response.json();
+
+                if (analyticsData.total_evaluated === 0) {
+                    content.innerHTML = `<div class="empty-state">
+                        <h3>Keine Daten verfügbar</h3>
+                        <p>Es wurden noch keine Trading-Setups ausgewertet. Starte erst eine Evaluation im Journal.</p>
+                    </div>`;
+                    updateSummaryStats(null);
+                    return;
+                }
+
+                renderAnalytics(analyticsData);
+                updateSummaryStats(analyticsData);
+
+            } catch (e) {
+                console.error('Fehler beim Laden der Analytics:', e);
+                content.innerHTML = `<div class="empty-state">
+                    <h3>Fehler beim Laden</h3>
+                    <p>${e.message}</p>
+                </div>`;
+            }
+        }
+
+        function updateSummaryStats(data) {
+            if (!data) {
+                document.getElementById('totalEvaluated').textContent = '-';
+                document.getElementById('totalCorrect').textContent = '-';
+                document.getElementById('overallAccuracy').textContent = '-';
+                document.getElementById('bestCategory').textContent = '-';
+                return;
+            }
+
+            document.getElementById('totalEvaluated').textContent = data.total_evaluated;
+            document.getElementById('totalCorrect').textContent = data.total_correct;
+
+            const accEl = document.getElementById('overallAccuracy');
+            accEl.textContent = data.overall_accuracy.toFixed(1) + '%';
+            accEl.className = 'stat-value ' + getAccuracyClass(data.overall_accuracy);
+
+            // Find best performing category
+            const bestCategory = findBestCategory(data);
+            document.getElementById('bestCategory').textContent = bestCategory;
+        }
+
+        function findBestCategory(data) {
+            let best = { name: '-', accuracy: 0, count: 0 };
+
+            // Check score ranges
+            for (const [range, stats] of Object.entries(data.by_score_range || {})) {
+                if (stats.total >= 5 && stats.accuracy > best.accuracy) {
+                    best = { name: `Score ${range}`, accuracy: stats.accuracy, count: stats.total };
+                }
+            }
+
+            // Check alignments
+            for (const [align, stats] of Object.entries(data.by_alignment || {})) {
+                if (stats.total >= 5 && stats.accuracy > best.accuracy) {
+                    best = { name: `${align.charAt(0).toUpperCase() + align.slice(1)} Align`, accuracy: stats.accuracy, count: stats.total };
+                }
+            }
+
+            return best.name !== '-' ? `${best.name} (${best.accuracy.toFixed(0)}%)` : '-';
+        }
+
+        function renderAnalytics(data) {
+            let html = '';
+
+            // Insights Section
+            html += renderInsights(data);
+
+            html += '<div class="analytics-grid">';
+
+            // Direction Chart
+            html += `
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3>Erfolgsrate nach Richtung</h3>
+                </div>
+                <div class="chart-container small">
+                    <canvas id="directionChart"></canvas>
+                </div>
+            </div>`;
+
+            // Score Range Chart
+            html += `
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3>Erfolgsrate nach Score-Bereich</h3>
+                </div>
+                <div class="chart-container small">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+            </div>`;
+
+            // Alignment Chart
+            html += `
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3>Erfolgsrate nach Signal-Alignment</h3>
+                </div>
+                <div class="chart-container small">
+                    <canvas id="alignmentChart"></canvas>
+                </div>
+            </div>`;
+
+            // Signals Count Chart
+            html += `
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3>Erfolgsrate nach Signalanzahl</h3>
+                </div>
+                <div class="chart-container small">
+                    <canvas id="signalsCountChart"></canvas>
+                </div>
+            </div>`;
+
+            // Symbol Performance Table
+            html += `
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3>Erfolgsrate nach Symbol</h3>
+                    <span class="card-info">${Object.keys(data.by_symbol || {}).length} Symbole</span>
+                </div>
+                <div class="table-wrapper">
+                    ${renderCategoryTable(data.by_symbol, 'Symbol')}
+                </div>
+            </div>`;
+
+            // Timeframe Performance Table
+            html += `
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3>Erfolgsrate nach Timeframe</h3>
+                </div>
+                ${renderCategoryTable(data.by_timeframe, 'Timeframe')}
+            </div>`;
+
+            // Signal Performance
+            html += `
+            <div class="analytics-card full-width">
+                <div class="card-header">
+                    <h3>Signal-Performance</h3>
+                    <span class="card-info">Welche ML-Signale korrelieren mit Erfolg?</span>
+                </div>
+                ${renderSignalPerformance(data.signal_performance)}
+            </div>`;
+
+            // Key Drivers
+            if (Object.keys(data.key_driver_performance || {}).length > 0) {
+                html += `
+                <div class="analytics-card full-width">
+                    <div class="card-header">
+                        <h3>Key Driver Performance</h3>
+                        <span class="card-info">Welche Faktoren treiben Erfolg?</span>
+                    </div>
+                    ${renderKeyDrivers(data.key_driver_performance)}
+                </div>`;
+            }
+
+            // Confidence Level
+            html += `
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h3>Erfolgsrate nach Konfidenz-Level</h3>
+                </div>
+                ${renderCategoryTable(data.by_confidence_level, 'Konfidenz')}
+            </div>`;
+
+            html += '</div>';
+
+            document.getElementById('analyticsContent').innerHTML = html;
+
+            // Render charts after DOM is ready
+            setTimeout(() => {
+                renderDirectionChart(data.by_direction);
+                renderScoreChart(data.by_score_range);
+                renderAlignmentChart(data.by_alignment);
+                renderSignalsCountChart(data.by_signals_count);
+            }, 100);
+        }
+
+        function renderInsights(data) {
+            const insights = [];
+
+            // Best direction
+            const longAcc = data.by_direction?.long?.accuracy || 0;
+            const shortAcc = data.by_direction?.short?.accuracy || 0;
+            if (longAcc !== shortAcc && (data.by_direction?.long?.total >= 5 || data.by_direction?.short?.total >= 5)) {
+                const better = longAcc > shortAcc ? 'Long' : 'Short';
+                const diff = Math.abs(longAcc - shortAcc).toFixed(1);
+                insights.push({
+                    icon: longAcc > shortAcc ? '📈' : '📉',
+                    text: `<strong>${better}</strong>-Setups performen ${diff}% besser als ${better === 'Long' ? 'Short' : 'Long'}-Setups.`
+                });
+            }
+
+            // Best score range
+            const scoreRanges = Object.entries(data.by_score_range || {})
+                .filter(([_, s]) => s.total >= 3)
+                .sort((a, b) => b[1].accuracy - a[1].accuracy);
+            if (scoreRanges.length > 0) {
+                const [bestRange, bestStats] = scoreRanges[0];
+                if (bestStats.accuracy >= 60) {
+                    insights.push({
+                        icon: '🎯',
+                        text: `Setups mit Score <strong>${bestRange}</strong> haben die beste Trefferquote (${bestStats.accuracy.toFixed(1)}% bei ${bestStats.total} Setups).`
+                    });
+                }
+            }
+
+            // Strong alignment performance
+            const strongAlign = data.by_alignment?.strong;
+            if (strongAlign && strongAlign.total >= 5 && strongAlign.accuracy >= 60) {
+                insights.push({
+                    icon: '💪',
+                    text: `<strong>Strong Alignment</strong> zeigt ${strongAlign.accuracy.toFixed(1)}% Erfolgsrate - achte auf einheitliche Signal-Richtungen!`
+                });
+            }
+
+            // Best signal
+            const signals = Object.entries(data.signal_performance || {})
+                .filter(([_, s]) => s.present >= 5)
+                .sort((a, b) => b[1].accuracy_when_aligned - a[1].accuracy_when_aligned);
+            if (signals.length > 0) {
+                const [bestSignal, bestSignalStats] = signals[0];
+                if (bestSignalStats.accuracy_when_aligned >= 60) {
+                    const signalName = bestSignal.replace('_', '-').toUpperCase();
+                    insights.push({
+                        icon: '⭐',
+                        text: `Das <strong>${signalName}</strong>-Signal hat die höchste Korrelation mit Erfolg (${bestSignalStats.accuracy_when_aligned.toFixed(1)}% wenn aligned).`
+                    });
+                }
+            }
+
+            // Best key driver
+            const drivers = Object.entries(data.key_driver_performance || {})
+                .filter(([_, s]) => s.total >= 5)
+                .sort((a, b) => b[1].accuracy - a[1].accuracy);
+            if (drivers.length > 0) {
+                const [bestDriver, bestDriverStats] = drivers[0];
+                if (bestDriverStats.accuracy >= 65) {
+                    insights.push({
+                        icon: '🔑',
+                        text: `Der Key Driver "<strong>${bestDriver}</strong>" korreliert stark mit Erfolg (${bestDriverStats.accuracy.toFixed(1)}% Trefferquote).`
+                    });
+                }
+            }
+
+            // Low score warning
+            const lowScore = data.by_score_range?.["0-50"];
+            if (lowScore && lowScore.total >= 5 && lowScore.accuracy < 40) {
+                insights.push({
+                    icon: '⚠️',
+                    text: `Setups mit <strong>Score unter 50</strong> haben nur ${lowScore.accuracy.toFixed(1)}% Erfolgsrate - vermeide diese!`
+                });
+            }
+
+            if (insights.length === 0) {
+                return '';
+            }
+
+            return `
+            <div class="analytics-card insights-card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h3>Erkenntnisse</h3>
+                    <span class="card-info">Basierend auf ${data.total_evaluated} ausgewerteten Setups</span>
+                </div>
+                ${insights.map(i => `
+                    <div class="insight-item">
+                        <span class="insight-icon">${i.icon}</span>
+                        <div class="insight-text">${i.text}</div>
+                    </div>
+                `).join('')}
+            </div>`;
+        }
+
+        function renderCategoryTable(categoryData, labelName) {
+            if (!categoryData || Object.keys(categoryData).length === 0) {
+                return '<p style="color: #64748b; text-align: center; padding: 1rem;">Keine Daten verfügbar</p>';
+            }
+
+            // Sort by total count descending
+            const sorted = Object.entries(categoryData)
+                .sort((a, b) => b[1].total - a[1].total);
+
+            let html = `<table class="data-table">
+                <thead>
+                    <tr>
+                        <th>${labelName}</th>
+                        <th>Anzahl</th>
+                        <th>Korrekt</th>
+                        <th>Trefferquote</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            sorted.forEach(([key, stats]) => {
+                const accClass = getAccuracyClass(stats.accuracy || 0);
+                html += `
+                <tr>
+                    <td><strong>${key}</strong></td>
+                    <td><span class="count-badge">${stats.total}</span></td>
+                    <td>${stats.correct}</td>
+                    <td>
+                        <div class="accuracy-bar">
+                            <div class="accuracy-bar-bg">
+                                <div class="accuracy-bar-fill ${accClass}" style="width: ${stats.accuracy || 0}%"></div>
+                            </div>
+                            <span class="accuracy-value ${accClass}">${(stats.accuracy || 0).toFixed(1)}%</span>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function renderSignalPerformance(signalData) {
+            if (!signalData || Object.keys(signalData).length === 0) {
+                return '<p style="color: #64748b; text-align: center; padding: 1rem;">Keine Daten verfügbar</p>';
+            }
+
+            const signalNames = {
+                nhits: 'NHITS',
+                hmm: 'HMM',
+                tcn: 'TCN',
+                candlestick: 'Candlestick',
+                technical: 'Technical',
+                cnn_lstm: 'CNN-LSTM'
+            };
+
+            let html = '<div class="signal-performance-grid">';
+
+            for (const [sigKey, stats] of Object.entries(signalData)) {
+                const name = signalNames[sigKey] || sigKey;
+                const presentAcc = stats.accuracy_when_present || 0;
+                const alignedAcc = stats.accuracy_when_aligned || 0;
+                const presentClass = getAccuracyClass(presentAcc);
+                const alignedClass = getAccuracyClass(alignedAcc);
+
+                html += `
+                <div class="signal-card">
+                    <div class="signal-card-header">
+                        <span class="signal-name">${name}</span>
+                        <span class="count-badge">${stats.present} Setups</span>
+                    </div>
+                    <div class="signal-stats">
+                        <div class="signal-stat">
+                            <span class="label">Wenn vorhanden:</span>
+                            <span class="value ${presentClass}">${presentAcc.toFixed(1)}%</span>
+                        </div>
+                        <div class="signal-stat">
+                            <span class="label">Wenn aligned:</span>
+                            <span class="value ${alignedClass}">${alignedAcc.toFixed(1)}%</span>
+                        </div>
+                        <div class="signal-stat">
+                            <span class="label">Aligned Count:</span>
+                            <span class="value">${stats.aligned}</span>
+                        </div>
+                        <div class="signal-stat">
+                            <span class="label">Correct (aligned):</span>
+                            <span class="value">${stats.correct_when_aligned}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function renderKeyDrivers(driverData) {
+            if (!driverData || Object.keys(driverData).length === 0) {
+                return '<p style="color: #64748b; text-align: center; padding: 1rem;">Keine Daten verfügbar</p>';
+            }
+
+            // Already sorted by accuracy in backend
+            let html = '<div class="key-drivers-list">';
+
+            for (const [driver, stats] of Object.entries(driverData)) {
+                if (stats.total < 2) continue;  // Skip rare drivers
+
+                const accClass = getAccuracyClass(stats.accuracy);
+                html += `
+                <div class="key-driver-tag">
+                    <span class="driver-name">${driver}</span>
+                    <span class="driver-accuracy ${accClass}">${stats.accuracy.toFixed(0)}%</span>
+                    <span class="count-badge">${stats.total}</span>
+                </div>`;
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function renderDirectionChart(data) {
+            const ctx = document.getElementById('directionChart');
+            if (!ctx) return;
+
+            charts.direction = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Long', 'Short'],
+                    datasets: [{
+                        label: 'Trefferquote',
+                        data: [data?.long?.accuracy || 0, data?.short?.accuracy || 0],
+                        backgroundColor: ['rgba(16, 185, 129, 0.7)', 'rgba(239, 68, 68, 0.7)'],
+                        borderColor: ['#10b981', '#ef4444'],
+                        borderWidth: 1
+                    }]
+                },
+                options: getChartOptions('Trefferquote (%)', 100)
+            });
+        }
+
+        function renderScoreChart(data) {
+            const ctx = document.getElementById('scoreChart');
+            if (!ctx) return;
+
+            const labels = Object.keys(data || {});
+            const values = labels.map(k => data[k]?.accuracy || 0);
+
+            charts.score = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Trefferquote',
+                        data: values,
+                        backgroundColor: values.map(v => getAccuracyColor(v)),
+                        borderWidth: 0
+                    }]
+                },
+                options: getChartOptions('Trefferquote (%)', 100)
+            });
+        }
+
+        function renderAlignmentChart(data) {
+            const ctx = document.getElementById('alignmentChart');
+            if (!ctx) return;
+
+            const order = ['strong', 'moderate', 'mixed', 'conflict'];
+            const labels = order.filter(k => data && data[k]);
+            const values = labels.map(k => data[k]?.accuracy || 0);
+
+            charts.alignment = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+                    datasets: [{
+                        label: 'Trefferquote',
+                        data: values,
+                        backgroundColor: values.map(v => getAccuracyColor(v)),
+                        borderWidth: 0
+                    }]
+                },
+                options: getChartOptions('Trefferquote (%)', 100)
+            });
+        }
+
+        function renderSignalsCountChart(data) {
+            const ctx = document.getElementById('signalsCountChart');
+            if (!ctx) return;
+
+            const labels = Object.keys(data || {});
+            const values = labels.map(k => data[k]?.accuracy || 0);
+
+            charts.signalsCount = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.map(l => l + ' Signale'),
+                    datasets: [{
+                        label: 'Trefferquote',
+                        data: values,
+                        backgroundColor: values.map(v => getAccuracyColor(v)),
+                        borderWidth: 0
+                    }]
+                },
+                options: getChartOptions('Trefferquote (%)', 100)
+            });
+        }
+
+        function getChartOptions(yLabel, maxY) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: maxY,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: yLabel,
+                            color: '#94a3b8'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        }
+                    }
+                }
+            };
+        }
+
+        function getAccuracyClass(accuracy) {
+            if (accuracy >= 60) return 'high';
+            if (accuracy >= 45) return 'medium';
+            return 'low';
+        }
+
+        function getAccuracyColor(accuracy) {
+            if (accuracy >= 60) return 'rgba(16, 185, 129, 0.7)';
+            if (accuracy >= 45) return 'rgba(245, 158, 11, 0.7)';
+            return 'rgba(239, 68, 68, 0.7)';
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

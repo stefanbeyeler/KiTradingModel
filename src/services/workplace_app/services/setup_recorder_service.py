@@ -413,6 +413,253 @@ class SetupRecorderService:
             logger.error(f"Error getting accuracy stats: {e}")
             return {}
 
+    async def get_analytics(
+        self,
+        symbol: Optional[str] = None,
+        timeframe: Optional[str] = None,
+        days: int = 30,
+    ) -> dict:
+        """
+        Get detailed analytics for setup evaluation.
+
+        Analyzes success rates by symbol, timeframe, direction, score ranges,
+        signal combinations, and individual signal performance.
+
+        Args:
+            symbol: Optional symbol filter
+            timeframe: Optional timeframe filter
+            days: Number of days to analyze
+
+        Returns:
+            Detailed analytics dictionary
+        """
+        try:
+            client = await self._get_client()
+
+            # Build query params
+            params = {
+                "service": "workplace",
+                "limit": 2000,  # Get all for analysis
+            }
+            if symbol:
+                params["symbol"] = symbol
+            if timeframe:
+                params["timeframe"] = timeframe
+
+            # Get all evaluated predictions
+            response = await client.get(
+                f"{self._data_service_url}/api/v1/predictions/",
+                params={**params, "evaluated_only": True}
+            )
+
+            if response.status_code != 200:
+                return {"error": "Failed to fetch predictions"}
+
+            predictions = response.json()
+
+            if not predictions:
+                return {
+                    "total_evaluated": 0,
+                    "message": "Keine ausgewerteten Setups gefunden",
+                }
+
+            # Initialize analytics containers
+            analytics = {
+                "total_evaluated": 0,
+                "total_correct": 0,
+                "overall_accuracy": 0.0,
+                "by_symbol": {},
+                "by_timeframe": {},
+                "by_direction": {"long": {"total": 0, "correct": 0}, "short": {"total": 0, "correct": 0}},
+                "by_score_range": {
+                    "0-50": {"total": 0, "correct": 0},
+                    "50-65": {"total": 0, "correct": 0},
+                    "65-75": {"total": 0, "correct": 0},
+                    "75-100": {"total": 0, "correct": 0},
+                },
+                "by_alignment": {
+                    "strong": {"total": 0, "correct": 0},
+                    "moderate": {"total": 0, "correct": 0},
+                    "mixed": {"total": 0, "correct": 0},
+                    "conflict": {"total": 0, "correct": 0},
+                },
+                "by_signals_count": {
+                    "1-2": {"total": 0, "correct": 0},
+                    "3-4": {"total": 0, "correct": 0},
+                    "5-6": {"total": 0, "correct": 0},
+                },
+                "signal_performance": {
+                    "nhits": {"present": 0, "correct_when_present": 0, "aligned": 0, "correct_when_aligned": 0},
+                    "hmm": {"present": 0, "correct_when_present": 0, "aligned": 0, "correct_when_aligned": 0},
+                    "tcn": {"present": 0, "correct_when_present": 0, "aligned": 0, "correct_when_aligned": 0},
+                    "candlestick": {"present": 0, "correct_when_present": 0, "aligned": 0, "correct_when_aligned": 0},
+                    "technical": {"present": 0, "correct_when_present": 0, "aligned": 0, "correct_when_aligned": 0},
+                    "cnn_lstm": {"present": 0, "correct_when_present": 0, "aligned": 0, "correct_when_aligned": 0},
+                },
+                "by_confidence_level": {
+                    "high": {"total": 0, "correct": 0},
+                    "medium": {"total": 0, "correct": 0},
+                    "low": {"total": 0, "correct": 0},
+                },
+                "key_driver_performance": {},  # Welche Key Drivers korrelieren mit Erfolg
+            }
+
+            for pred in predictions:
+                if pred.get("evaluated_at") is None:
+                    continue
+
+                is_correct = pred.get("is_correct")
+                if is_correct is None:
+                    continue
+
+                pred_data = pred.get("prediction", {})
+                if not pred_data:
+                    continue
+
+                analytics["total_evaluated"] += 1
+                if is_correct:
+                    analytics["total_correct"] += 1
+
+                sym = pred.get("symbol", "unknown")
+                tf = pred.get("timeframe", "unknown")
+                direction = pred_data.get("direction", "neutral")
+                score = pred_data.get("composite_score", 0)
+                alignment = pred_data.get("signal_alignment", "mixed")
+                signals_count = pred_data.get("signals_available", 0)
+                confidence = pred_data.get("confidence_level", "low")
+                signals = pred_data.get("signals", {})
+                key_drivers = pred_data.get("key_drivers", [])
+
+                # By Symbol
+                if sym not in analytics["by_symbol"]:
+                    analytics["by_symbol"][sym] = {"total": 0, "correct": 0}
+                analytics["by_symbol"][sym]["total"] += 1
+                if is_correct:
+                    analytics["by_symbol"][sym]["correct"] += 1
+
+                # By Timeframe
+                if tf not in analytics["by_timeframe"]:
+                    analytics["by_timeframe"][tf] = {"total": 0, "correct": 0}
+                analytics["by_timeframe"][tf]["total"] += 1
+                if is_correct:
+                    analytics["by_timeframe"][tf]["correct"] += 1
+
+                # By Direction
+                if direction in analytics["by_direction"]:
+                    analytics["by_direction"][direction]["total"] += 1
+                    if is_correct:
+                        analytics["by_direction"][direction]["correct"] += 1
+
+                # By Score Range
+                if score < 50:
+                    score_range = "0-50"
+                elif score < 65:
+                    score_range = "50-65"
+                elif score < 75:
+                    score_range = "65-75"
+                else:
+                    score_range = "75-100"
+                analytics["by_score_range"][score_range]["total"] += 1
+                if is_correct:
+                    analytics["by_score_range"][score_range]["correct"] += 1
+
+                # By Alignment
+                if alignment in analytics["by_alignment"]:
+                    analytics["by_alignment"][alignment]["total"] += 1
+                    if is_correct:
+                        analytics["by_alignment"][alignment]["correct"] += 1
+
+                # By Signals Count
+                if signals_count <= 2:
+                    sig_range = "1-2"
+                elif signals_count <= 4:
+                    sig_range = "3-4"
+                else:
+                    sig_range = "5-6"
+                analytics["by_signals_count"][sig_range]["total"] += 1
+                if is_correct:
+                    analytics["by_signals_count"][sig_range]["correct"] += 1
+
+                # By Confidence Level
+                if confidence in analytics["by_confidence_level"]:
+                    analytics["by_confidence_level"][confidence]["total"] += 1
+                    if is_correct:
+                        analytics["by_confidence_level"][confidence]["correct"] += 1
+
+                # Signal Performance Analysis
+                for sig_name, sig_data in (signals or {}).items():
+                    if sig_data and isinstance(sig_data, dict) and sig_data.get("available"):
+                        if sig_name in analytics["signal_performance"]:
+                            analytics["signal_performance"][sig_name]["present"] += 1
+                            if is_correct:
+                                analytics["signal_performance"][sig_name]["correct_when_present"] += 1
+
+                            # Check if signal was aligned with direction
+                            sig_dir = sig_data.get("direction") or sig_data.get("price_direction")
+                            if sig_dir == direction:
+                                analytics["signal_performance"][sig_name]["aligned"] += 1
+                                if is_correct:
+                                    analytics["signal_performance"][sig_name]["correct_when_aligned"] += 1
+
+                # Key Driver Performance
+                for driver in key_drivers:
+                    if driver not in analytics["key_driver_performance"]:
+                        analytics["key_driver_performance"][driver] = {"total": 0, "correct": 0}
+                    analytics["key_driver_performance"][driver]["total"] += 1
+                    if is_correct:
+                        analytics["key_driver_performance"][driver]["correct"] += 1
+
+            # Calculate accuracy percentages
+            total = analytics["total_evaluated"]
+            if total > 0:
+                analytics["overall_accuracy"] = round(analytics["total_correct"] / total * 100, 2)
+
+                # Calculate accuracy for each category
+                for cat_key in ["by_symbol", "by_timeframe", "by_direction", "by_score_range",
+                               "by_alignment", "by_signals_count", "by_confidence_level"]:
+                    for key, val in analytics[cat_key].items():
+                        if val["total"] > 0:
+                            val["accuracy"] = round(val["correct"] / val["total"] * 100, 2)
+                        else:
+                            val["accuracy"] = 0.0
+
+                # Signal performance accuracy
+                for sig_name, sig_stats in analytics["signal_performance"].items():
+                    if sig_stats["present"] > 0:
+                        sig_stats["accuracy_when_present"] = round(
+                            sig_stats["correct_when_present"] / sig_stats["present"] * 100, 2
+                        )
+                    else:
+                        sig_stats["accuracy_when_present"] = 0.0
+
+                    if sig_stats["aligned"] > 0:
+                        sig_stats["accuracy_when_aligned"] = round(
+                            sig_stats["correct_when_aligned"] / sig_stats["aligned"] * 100, 2
+                        )
+                    else:
+                        sig_stats["accuracy_when_aligned"] = 0.0
+
+                # Key driver accuracy
+                for driver, stats in analytics["key_driver_performance"].items():
+                    if stats["total"] > 0:
+                        stats["accuracy"] = round(stats["correct"] / stats["total"] * 100, 2)
+                    else:
+                        stats["accuracy"] = 0.0
+
+                # Sort key drivers by accuracy (descending)
+                sorted_drivers = sorted(
+                    analytics["key_driver_performance"].items(),
+                    key=lambda x: (x[1]["accuracy"], x[1]["total"]),
+                    reverse=True
+                )
+                analytics["key_driver_performance"] = dict(sorted_drivers)
+
+            return analytics
+
+        except Exception as e:
+            logger.error(f"Error getting analytics: {e}")
+            return {"error": str(e)}
+
     async def cleanup_invalid_predictions(self) -> dict:
         """
         Delete predictions that cannot be evaluated (no entry_price).

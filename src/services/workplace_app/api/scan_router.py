@@ -252,6 +252,45 @@ async def trigger_evaluation():
         )
 
 
+@router.get(
+    "/analytics",
+    summary="Setup-Analytics",
+    description="Detaillierte Auswertung der Trading-Setups nach verschiedenen Kriterien."
+)
+async def get_setup_analytics(
+    symbol: Optional[str] = Query(None, description="Filter nach Symbol"),
+    timeframe: Optional[str] = Query(None, description="Filter nach Timeframe"),
+    days: int = Query(90, ge=1, le=365, description="Zeitraum in Tagen")
+):
+    """
+    Detaillierte Analytics für Trading-Setups.
+
+    Analysiert Erfolgsraten nach:
+    - Symbol
+    - Timeframe
+    - Richtung (Long/Short)
+    - Score-Bereichen
+    - Signal-Alignment
+    - Anzahl aktiver Signale
+    - Einzelne Signal-Performance
+    - Key Drivers
+    """
+    try:
+        analytics = await setup_recorder.get_analytics(
+            symbol=symbol,
+            timeframe=timeframe,
+            days=days,
+        )
+        return analytics
+
+    except Exception as e:
+        logger.error(f"Fehler beim Abrufen der Analytics: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Fehler: {str(e)}"
+        )
+
+
 @router.delete(
     "/cleanup-invalid",
     summary="Ungültige Setups bereinigen",
