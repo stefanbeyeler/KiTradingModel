@@ -16,10 +16,11 @@
 #   - watchdog:     1 CPU,   1GB    (monitoring + training orchestrator)
 #
 # LOW PRIORITY (Training - uses remaining resources, orchestrated by Watchdog):
-#   - nhits-train:       4 CPU,   16GB  (with nice priority)
-#   - tcn-train:         4 CPU,   8GB   (with nice priority)
+#   - nhits-train:       2 CPU,   16GB  (with nice priority)
+#   - tcn-train:         2 CPU,   8GB   (with nice priority)
 #   - hmm-train:         2 CPU,   4GB   (with nice priority)
 #   - candlestick-train: 2 CPU,   4GB   (with nice priority)
+#   - cnn-lstm-train:    2 CPU,   12GB  (with nice priority)
 #
 # Total Reserved: ~28 CPUs (with overcommit), ~75 GB RAM
 # Remaining for system: ~47 GB RAM
@@ -420,10 +421,10 @@ services:
       - OLLAMA_HOST=http://host.docker.internal:11434
       - DATA_SERVICE_URL=http://trading-data:${DATA_SERVICE_PORT:-3001}
       # Limit CPU threads for training to prevent blocking
-      - OMP_NUM_THREADS=4
-      - MKL_NUM_THREADS=4
-      - OPENBLAS_NUM_THREADS=4
-      - NUMEXPR_MAX_THREADS=4
+      - OMP_NUM_THREADS=2
+      - MKL_NUM_THREADS=2
+      - OPENBLAS_NUM_THREADS=2
+      - NUMEXPR_MAX_THREADS=2
       # Build version info
       - BUILD_VERSION=${BUILD_VERSION:-}
       - BUILD_COMMIT=${BUILD_COMMIT:-}
@@ -437,7 +438,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
+          cpus: '2'
           memory: 16G
         reservations:
           devices:
@@ -576,10 +577,10 @@ services:
       - TCN_AUTO_TRAIN=true
       - TCN_MODEL_DIR=/app/data/models/tcn
       # Limit CPU threads for training
-      - OMP_NUM_THREADS=4
-      - MKL_NUM_THREADS=4
-      - OPENBLAS_NUM_THREADS=4
-      - NUMEXPR_MAX_THREADS=4
+      - OMP_NUM_THREADS=2
+      - MKL_NUM_THREADS=2
+      - OPENBLAS_NUM_THREADS=2
+      - NUMEXPR_MAX_THREADS=2
     networks:
       - trading-net
     extra_hosts:
@@ -591,7 +592,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
+          cpus: '2'
           memory: 8G
         reservations:
           devices:
@@ -683,10 +684,10 @@ services:
       - NHITS_SERVICE_URL=http://trading-nhits:${NHITS_SERVICE_PORT:-3002}
       - MODEL_DIR=/app/data/models/nhits
       # Limit CPU threads for training
-      - OMP_NUM_THREADS=4
-      - MKL_NUM_THREADS=4
-      - OPENBLAS_NUM_THREADS=4
-      - NUMEXPR_MAX_THREADS=4
+      - OMP_NUM_THREADS=2
+      - MKL_NUM_THREADS=2
+      - OPENBLAS_NUM_THREADS=2
+      - NUMEXPR_MAX_THREADS=2
     networks:
       - trading-net
     extra_hosts:
@@ -698,7 +699,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
+          cpus: '2'
           memory: 16G
         reservations:
           devices:
@@ -798,10 +799,10 @@ services:
       - MODEL_DIR=/app/data/models/cnn-lstm
       - NICE_PRIORITY=19
       # Limit CPU threads for training
-      - OMP_NUM_THREADS=4
-      - MKL_NUM_THREADS=4
-      - OPENBLAS_NUM_THREADS=4
-      - NUMEXPR_MAX_THREADS=4
+      - OMP_NUM_THREADS=2
+      - MKL_NUM_THREADS=2
+      - OPENBLAS_NUM_THREADS=2
+      - NUMEXPR_MAX_THREADS=2
     networks:
       - trading-net
     extra_hosts:
@@ -813,7 +814,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'
+          cpus: '2'
           memory: 12G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${CNN_LSTM_TRAIN_SERVICE_PORT:-3017}/health"]
