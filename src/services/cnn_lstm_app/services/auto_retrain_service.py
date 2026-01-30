@@ -356,10 +356,15 @@ class AutoRetrainService:
                         if last_event.training_job_id == self._current_training_job:
                             # Map training service status to retrain status
                             if training_status in ["completed", "failed", "cancelled"]:
+                                was_running = last_event.training_status == "running"
                                 last_event.training_status = training_status
                                 self._current_training_job = None
                                 self._save_history()
                                 logger.info(f"Training {last_event.training_job_id} finished: {training_status}")
+
+                                # Run post-training evaluation if completed
+                                if training_status == "completed" and was_running:
+                                    asyncio.create_task(self._evaluate_after_training())
                             else:
                                 last_event.training_status = "running"
 
@@ -372,6 +377,9 @@ class AutoRetrainService:
                                 self._current_training_job = None
                                 self._save_history()
                                 logger.info(f"Training {last_event.training_job_id} completed (no active training)")
+
+                                # Run post-training evaluation
+                                asyncio.create_task(self._evaluate_after_training())
 
                     return status
 
@@ -404,25 +412,76 @@ class AutoRetrainService:
                     # If no training is running (idle), mark all "running" events as completed
                     if current_status == "idle":
                         updated = False
+                        needs_evaluation = False
                         for event in self._retrain_history:
                             if event.training_status == "running":
                                 event.training_status = "completed"
                                 updated = True
+                                # Only evaluate if no accuracy_after yet
+                                if event.accuracy_after is None:
+                                    needs_evaluation = True
                                 logger.info(f"Marked stale training {event.training_job_id} as completed")
 
                         if updated:
                             self._save_history()
+                            if needs_evaluation:
+                                asyncio.create_task(self._evaluate_after_training())
                     else:
                         # Training is active - update status for matching job
                         for event in self._retrain_history:
                             if event.training_job_id == current_job_id:
                                 if current_status in ["completed", "failed", "cancelled"]:
+                                    was_running = event.training_status == "running"
                                     event.training_status = current_status
                                     self._save_history()
                                     logger.info(f"Training {event.training_job_id} finished: {current_status}")
 
+                                    # Trigger evaluation if completed
+                                    if current_status == "completed" and was_running and event.accuracy_after is None:
+                                        asyncio.create_task(self._evaluate_after_training())
+
         except Exception as e:
             logger.debug(f"Could not update pending events: {e}")
+
+    async def _evaluate_after_training(self):
+        """
+        Fuehre nach Training-Abschluss einen Backtest durch und aktualisiere Accuracy.
+
+        Wird automatisch aufgerufen wenn Training als "completed" markiert wird.
+        """
+        try:
+            # Warte kurz, damit das neue Modell geladen werden kann
+            logger.info("Post-training evaluation: waiting for model reload...")
+            await asyncio.sleep(5)
+
+            # Importiere Services hier um zirkulaere Imports zu vermeiden
+            from .backtesting_service import backtesting_service
+            from .prediction_history_service import prediction_history_service
+
+            # Hole Predictions fuer Backtest
+            predictions = prediction_history_service.get_history(limit=100)
+
+            if not predictions:
+                logger.warning("Post-training evaluation: no predictions available for backtest")
+                return
+
+            # Fuehre schnellen Backtest durch
+            logger.info(f"Post-training evaluation: running backtest on {len(predictions)} predictions...")
+            await backtesting_service.run_backtests(predictions, max_backtests=50)
+
+            # Hole neue Summary
+            summary = backtesting_service.get_summary()
+            new_accuracy = summary.get("price_direction_accuracy", 0.0)
+            total_backtests = summary.get("backtested", 0)
+
+            if total_backtests > 0:
+                await self.update_accuracy_after_training(new_accuracy)
+                logger.info(f"Post-training evaluation complete: {new_accuracy:.1f}% accuracy ({total_backtests} backtests)")
+            else:
+                logger.warning("Post-training evaluation: no backtest results available")
+
+        except Exception as e:
+            logger.error(f"Post-training evaluation failed: {e}")
 
     async def update_accuracy_after_training(self, new_accuracy: float):
         """
@@ -435,7 +494,7 @@ class AutoRetrainService:
             return
 
         last_event = self._retrain_history[-1]
-        if last_event.training_status == "completed":
+        if last_event.training_status == "completed" and last_event.accuracy_after is None:
             last_event.accuracy_after = new_accuracy
             last_event.improvement = new_accuracy - last_event.accuracy_before
 

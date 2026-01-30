@@ -10,7 +10,7 @@ Ermoeglicht:
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from loguru import logger
 import os
@@ -872,6 +872,53 @@ async def get_retrain_statistics():
 
     except Exception as e:
         logger.error(f"Error getting retrain statistics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/retrain/evaluate", tags=["7. Self-Learning"])
+async def evaluate_training_result(background_tasks: BackgroundTasks):
+    """
+    Manuell die Accuracy nach dem letzten Training evaluieren.
+
+    Fuehrt einen Backtest durch und aktualisiert die accuracy_after/improvement
+    Werte in der Re-Training History.
+
+    Nuetzlich wenn die automatische Evaluation fehlgeschlagen ist oder
+    um historische Eintraege nachtraeglich zu aktualisieren.
+    """
+    try:
+        from ..services.auto_retrain_service import auto_retrain_service
+
+        # Check if there's a completed event without accuracy_after
+        history = auto_retrain_service.get_history(limit=1)
+        if not history:
+            return {"status": "no_history", "message": "Keine Training-History vorhanden"}
+
+        last_event = history[0]
+        if last_event.get("training_status") != "completed":
+            return {
+                "status": "not_completed",
+                "message": f"Letztes Training hat Status: {last_event.get('training_status')}"
+            }
+
+        if last_event.get("accuracy_after") is not None:
+            return {
+                "status": "already_evaluated",
+                "accuracy_before": last_event.get("accuracy_before"),
+                "accuracy_after": last_event.get("accuracy_after"),
+                "improvement": last_event.get("improvement")
+            }
+
+        # Run evaluation in background
+        background_tasks.add_task(auto_retrain_service._evaluate_after_training)
+
+        return {
+            "status": "evaluation_started",
+            "message": "Post-Training Evaluation gestartet. Ergebnisse in Kuerze verfuegbar."
+        }
+
+    except Exception as e:
+        logger.error(f"Error triggering training evaluation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
