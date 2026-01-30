@@ -8,6 +8,9 @@
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <!-- Lightweight Charts for custom indicators -->
     <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- TradingChart Komponenten -->
+    <script src="js/trading-chart.js"></script>
+    <script src="js/chart-toolbar.js"></script>
     <style>
         * {
             margin: 0;
@@ -1036,6 +1039,80 @@
 
         .section-title .icon {
             font-size: 0.85rem;
+        }
+
+        /* Chart Section im Detail Modal */
+        .chart-section {
+            margin-bottom: 0.5rem;
+        }
+
+        .chart-section .chart-toolbar-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.3rem;
+        }
+
+        .chart-section .chart-container {
+            height: 350px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #131722;
+        }
+
+        .chart-section .chart-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 350px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        /* Chart Sync Status Indicator */
+        .chart-sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            margin-left: 12px;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: #93c5fd;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .chart-sync-status.success {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        .sync-spinner {
+            width: 10px;
+            height: 10px;
+            border: 2px solid rgba(147, 197, 253, 0.3);
+            border-top-color: #93c5fd;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .sync-check {
+            color: #6ee7b7;
+            font-weight: bold;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         /* Setup-ID Display im Detail Modal */
@@ -2765,6 +2842,8 @@
         let currentDetailTimeframe = null;
         let llmAnalysisLoaded = false;
         let currentTrendStrength = null; // Cached trend strength data
+        let detailChart = null; // TradingChart Instanz
+        let detailToolbar = null; // ChartToolbar Instanz
 
         async function openDetailModal(symbol, timeframe) {
             // Validierung: Symbol muss vorhanden sein
@@ -2797,6 +2876,16 @@
             document.getElementById('detailModal').classList.remove('active');
             currentDetailSymbol = null;
             currentDetailTimeframe = null;
+
+            // Chart aufräumen
+            if (detailChart) {
+                try { detailChart.destroy(); } catch (e) {}
+                detailChart = null;
+            }
+            if (detailToolbar) {
+                try { detailToolbar.destroy(); } catch (e) {}
+                detailToolbar = null;
+            }
         }
 
         document.getElementById('detailModal').addEventListener('click', (e) => {
@@ -2874,6 +2963,9 @@
 
             // Alle Inhalte in einem einzigen Container rendern
             renderAllContent(setup, trendStrength);
+
+            // Chart initialisieren (nach DOM-Rendering)
+            setTimeout(() => initDetailChart(setup), 50);
         }
 
         function renderAllContent(setup, trendStrength = null) {
@@ -2882,6 +2974,7 @@
                 <div class="detail-columns">
                     <div class="detail-column">
                         ${renderOverviewSection(setup)}
+                        ${renderChartSection(setup)}
                         ${renderTrendStrengthSection(trendStrength)}
                         ${renderSignalsSection(setup)}
                         ${renderCnnLstmSection(setup)}
@@ -2892,6 +2985,248 @@
                     </div>
                 </div>
             `;
+        }
+
+        // =========================================================================
+        // CHART SECTION
+        // =========================================================================
+
+        function renderChartSection(setup) {
+            return `
+                <div class="consolidated-section chart-section">
+                    <h3 class="section-title"><span class="icon">📊</span> Chart</h3>
+                    <div id="detail-chart-toolbar" class="chart-toolbar-container"></div>
+                    <div id="detail-chart-container" class="chart-container">
+                        <div class="chart-loading">
+                            <div class="spinner"></div>
+                            <span style="margin-left: 8px;">Lade Chart-Daten...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function initDetailChart(setup) {
+            const chartContainer = document.getElementById('detail-chart-container');
+            const toolbarContainer = document.getElementById('detail-chart-toolbar');
+
+            if (!chartContainer || !toolbarContainer) {
+                console.warn('Chart-Container nicht gefunden');
+                return;
+            }
+
+            // Bestehenden Chart entfernen
+            if (detailChart) {
+                try { detailChart.destroy(); } catch (e) {}
+                detailChart = null;
+            }
+            if (detailToolbar) {
+                try { detailToolbar.destroy(); } catch (e) {}
+                detailToolbar = null;
+            }
+
+            // Container leeren
+            chartContainer.innerHTML = '';
+
+            const limit = getChartLimit(setup.timeframe);
+
+            try {
+                // Chart erstellen
+                detailChart = new TradingChart('detail-chart-container', {
+                    symbol: setup.symbol,
+                    timeframe: setup.timeframe,
+                    theme: 'dark',
+                    height: 350,
+                    showVolume: true,
+                    showLegend: true
+                });
+
+                // Toolbar erstellen
+                detailToolbar = new ChartToolbar('detail-chart-toolbar', detailChart, {
+                    theme: 'dark',
+                    compact: true,
+                    showGroups: false
+                });
+
+                // 1. Zuerst DB-Daten laden und anzeigen (schnell)
+                const dbResponse = await fetch(`/data/api/v1/db/ohlcv/${setup.symbol}?timeframe=${setup.timeframe}&limit=${limit}`);
+
+                if (!dbResponse.ok) {
+                    throw new Error(`HTTP ${dbResponse.status}`);
+                }
+
+                const dbData = await dbResponse.json();
+                let hasInitialData = false;
+
+                if (dbData.data && dbData.data.length > 0) {
+                    const ohlcData = formatAndSortOHLC(dbData.data);
+                    detailChart.setOHLCData(ohlcData);
+                    hasInitialData = true;
+
+                    // Entry/Exit Levels setzen
+                    setChartLevels(setup);
+
+                    // Standard-Indikatoren aktivieren
+                    detailChart.toggleIndicator('sma20', true);
+                    detailChart.toggleIndicator('volume', true);
+                    detailToolbar.setIndicatorState('sma20', true);
+                    detailToolbar.setIndicatorState('volume', true);
+
+                    // Sync-Status anzeigen
+                    showChartSyncStatus('Aktualisiere Daten...');
+                }
+
+                // 2. Im Hintergrund: Sync von externen APIs starten
+                syncChartDataInBackground(setup.symbol, setup.timeframe, limit, hasInitialData);
+
+            } catch (error) {
+                console.error('Fehler beim Initialisieren des Charts:', error);
+                chartContainer.innerHTML = `<div class="chart-loading">Fehler: ${error.message}</div>`;
+            }
+        }
+
+        /**
+         * Formatiert und sortiert OHLC-Daten für den Chart
+         */
+        function formatAndSortOHLC(data) {
+            return data.map(d => ({
+                time: d.time || d.timestamp || d.datetime || d.snapshot_time,
+                open: parseFloat(d.open),
+                high: parseFloat(d.high),
+                low: parseFloat(d.low),
+                close: parseFloat(d.close),
+                volume: parseFloat(d.volume || 0)
+            })).sort((a, b) => {
+                const timeA = new Date(a.time).getTime();
+                const timeB = new Date(b.time).getTime();
+                return timeA - timeB;
+            });
+        }
+
+        /**
+         * Setzt Entry/Exit-Levels im Chart
+         */
+        function setChartLevels(setup) {
+            if (detailChart && setup.entry_exit_levels && setup.entry_exit_levels.entry_price) {
+                detailChart.setLevels({
+                    entry: setup.entry_exit_levels.entry_price,
+                    stopLoss: setup.entry_exit_levels.stop_loss,
+                    takeProfit1: setup.entry_exit_levels.take_profit_1,
+                    takeProfit2: setup.entry_exit_levels.take_profit_2,
+                    takeProfit3: setup.entry_exit_levels.take_profit_3
+                }, setup.direction);
+            }
+        }
+
+        /**
+         * Zeigt Sync-Status über dem Chart an
+         */
+        function showChartSyncStatus(message) {
+            const toolbarContainer = document.getElementById('detail-chart-toolbar');
+            if (!toolbarContainer) return;
+
+            // Bestehenden Status entfernen
+            const existing = toolbarContainer.querySelector('.chart-sync-status');
+            if (existing) existing.remove();
+
+            const statusEl = document.createElement('div');
+            statusEl.className = 'chart-sync-status';
+            statusEl.innerHTML = `<span class="sync-spinner"></span>${message}`;
+            toolbarContainer.appendChild(statusEl);
+        }
+
+        /**
+         * Entfernt den Sync-Status
+         */
+        function hideChartSyncStatus() {
+            const existing = document.querySelector('.chart-sync-status');
+            if (existing) existing.remove();
+        }
+
+        /**
+         * Synchronisiert Chart-Daten im Hintergrund von externen APIs
+         */
+        async function syncChartDataInBackground(symbol, timeframe, limit, hasInitialData) {
+            try {
+                // Sync-Request an Data Service (holt Daten von TwelveData/EasyInsight)
+                const syncResponse = await fetch(
+                    `/data/api/v1/db/sync/${symbol}?timeframes=${timeframe}&limit=${limit}`,
+                    { method: 'POST' }
+                );
+
+                if (!syncResponse.ok) {
+                    console.warn(`Sync fehlgeschlagen: HTTP ${syncResponse.status}`);
+                    hideChartSyncStatus();
+                    return;
+                }
+
+                const syncResult = await syncResponse.json();
+                console.log('Sync-Ergebnis:', syncResult);
+
+                // Nach dem Sync: Aktualisierte Daten laden
+                const freshResponse = await fetch(
+                    `/data/api/v1/db/ohlcv/${symbol}?timeframe=${timeframe}&limit=${limit}&force_refresh=true`
+                );
+
+                if (!freshResponse.ok) {
+                    console.warn('Frische Daten konnten nicht geladen werden');
+                    hideChartSyncStatus();
+                    return;
+                }
+
+                const freshData = await freshResponse.json();
+
+                // Chart aktualisieren (falls noch vorhanden und Daten neu)
+                if (detailChart && freshData.data && freshData.data.length > 0) {
+                    const ohlcData = formatAndSortOHLC(freshData.data);
+
+                    // Prüfen ob die Daten neuer sind
+                    const latestTime = ohlcData[ohlcData.length - 1]?.time;
+                    console.log(`Chart aktualisiert: ${ohlcData.length} Kerzen, letzte: ${latestTime}`);
+
+                    detailChart.setOHLCData(ohlcData);
+
+                    // Status aktualisieren
+                    showChartSyncStatusSuccess(`Aktualisiert: ${new Date(latestTime).toLocaleString('de-CH')}`);
+                    setTimeout(hideChartSyncStatus, 3000);
+                } else {
+                    hideChartSyncStatus();
+                }
+
+            } catch (error) {
+                console.warn('Background-Sync fehlgeschlagen:', error);
+                hideChartSyncStatus();
+            }
+        }
+
+        /**
+         * Zeigt Erfolgs-Status
+         */
+        function showChartSyncStatusSuccess(message) {
+            const toolbarContainer = document.getElementById('detail-chart-toolbar');
+            if (!toolbarContainer) return;
+
+            const existing = toolbarContainer.querySelector('.chart-sync-status');
+            if (existing) {
+                existing.className = 'chart-sync-status success';
+                existing.innerHTML = `<span class="sync-check">✓</span>${message}`;
+            }
+        }
+
+        function getChartLimit(timeframe) {
+            // Mehr Kerzen für kleinere Timeframes
+            const limits = {
+                'M1': 200,
+                'M5': 150,
+                'M15': 120,
+                'M30': 100,
+                'H1': 100,
+                'H4': 80,
+                'D1': 60,
+                'W1': 52,
+                'MN': 24
+            };
+            return limits[timeframe] || 100;
         }
 
         function renderOverviewSection(setup) {
