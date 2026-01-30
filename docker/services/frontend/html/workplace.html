@@ -3022,36 +3022,51 @@
             if (!price) {
                 return `<div class="detail-card-value" style="color: ${color};">-</div>`;
             }
-            // Raw value without thousand separators for clipboard
-            const rawValue = getRawPriceString(price);
+            // Formatiere einmal für Anzeige
+            const displayValue = formatDetailPrice(price);
+            // Für Kopieren: Entferne Tausendertrennzeichen (Apostroph in CH-Format)
+            const copyValue = displayValue.replace(/'/g, '');
             return `
                 <div class="detail-card-value copyable-price"
                      style="color: ${color}; cursor: pointer;"
-                     onclick="copyToClipboard('${rawValue}')"
-                     title="Klicken zum Kopieren: ${rawValue}">
-                    ${formatDetailPrice(price)}
+                     onclick="doCopy('${copyValue}')"
+                     title="Klicken zum Kopieren: ${copyValue}">
+                    ${displayValue}
                 </div>
             `;
         }
 
-        function getRawPriceString(price) {
-            if (!price) return '';
-            // Return raw number without thousand separators
-            if (price > 1000) return price.toFixed(0);
-            if (price > 10) return price.toFixed(2);
-            if (price > 0.01) return price.toFixed(4);
-            return price.toFixed(6);
+        // Direkte Copy-Funktion im globalen Scope
+        function doCopy(val) {
+            if (!val) return;
+            const ta = document.createElement('textarea');
+            ta.value = val;
+            ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.01';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                const success = document.execCommand('copy');
+                if (success) {
+                    showCopyFeedback(val);
+                } else {
+                    console.error('execCommand copy returned false');
+                }
+            } catch(e) {
+                console.error('Copy error:', e);
+            }
+            document.body.removeChild(ta);
         }
 
         function copyToClipboard(text) {
+            if (!text) return;
             navigator.clipboard.writeText(text).then(() => {
-                // Visual feedback
                 showCopyFeedback(text);
             }).catch(err => {
                 console.error('Copy failed:', err);
-                // Fallback for older browsers
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
+                textarea.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
                 document.body.appendChild(textarea);
                 textarea.select();
                 document.execCommand('copy');
