@@ -582,6 +582,41 @@
             opacity: 1;
         }
 
+        /* Entry-Status Indicator */
+        .entry-status {
+            font-family: 'Courier New', monospace;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 600;
+            opacity: 1;
+        }
+
+        .entry-status.pending {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+        }
+
+        .entry-status.active {
+            background: rgba(16, 185, 129, 0.25);
+            color: #10b981;
+        }
+
+        .entry-status.missed {
+            background: rgba(239, 68, 68, 0.25);
+            color: #ef4444;
+        }
+
+        /* Setup-Card mit verpasstem Entry abschwächen */
+        .setup-card.entry-missed {
+            opacity: 0.6;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .setup-card.entry-missed:hover {
+            opacity: 0.8;
+        }
+
         /* Entry/Exit Levels - Compact */
         .setup-levels {
             display: grid;
@@ -1029,6 +1064,49 @@
 
         .section-divider {
             display: none;
+        }
+
+        /* Zwei-Spalten Layout für Übersicht */
+        .overview-two-columns {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .overview-left {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .overview-right {
+            flex: 0 0 280px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Levels Container im rechten Bereich */
+        .levels-container {
+            background: rgba(167, 139, 250, 0.05);
+            border: 1px solid rgba(167, 139, 250, 0.15);
+            border-radius: 5px;
+            padding: 0.4rem 0.5rem;
+        }
+
+        .levels-grid .detail-card {
+            padding: 0.2rem 0.3rem;
+        }
+
+        .levels-placeholder {
+            padding: 1rem;
+            text-align: center;
+        }
+
+        @media (max-width: 700px) {
+            .overview-two-columns {
+                flex-direction: column;
+            }
+            .overview-right {
+                flex: 1;
+            }
         }
 
         .llm-prompt-box {
@@ -2364,6 +2442,56 @@
             return `${days}d`;
         }
 
+        // Entry-Status prüfen: Ist das Entry noch erreichbar?
+        // Returns: { status: 'pending'|'active'|'missed', distance: number, distancePercent: number }
+        function getEntryStatus(setup) {
+            const result = { status: 'pending', distance: 0, distancePercent: 0, label: '' };
+
+            if (!setup.entry_exit_levels?.entry_price || !setup.current_price) {
+                return result;
+            }
+
+            const entry = setup.entry_exit_levels.entry_price;
+            const current = setup.current_price;
+            const direction = setup.direction;
+
+            // Distanz berechnen
+            result.distance = current - entry;
+            result.distancePercent = ((current - entry) / entry) * 100;
+
+            // Toleranz: 0.1% vom Entry (kleine Schwankungen ignorieren)
+            const tolerancePercent = 0.1;
+            const tolerance = entry * (tolerancePercent / 100);
+
+            if (direction === 'long') {
+                // LONG: Entry verpasst wenn Preis deutlich über Entry liegt
+                if (current > entry + tolerance) {
+                    result.status = 'missed';
+                    result.label = `+${Math.abs(result.distancePercent).toFixed(2)}%`;
+                } else if (current >= entry - tolerance) {
+                    result.status = 'active';
+                    result.label = 'Entry';
+                } else {
+                    result.status = 'pending';
+                    result.label = `${result.distancePercent.toFixed(2)}%`;
+                }
+            } else if (direction === 'short') {
+                // SHORT: Entry verpasst wenn Preis deutlich unter Entry liegt
+                if (current < entry - tolerance) {
+                    result.status = 'missed';
+                    result.label = `${result.distancePercent.toFixed(2)}%`;
+                } else if (current <= entry + tolerance) {
+                    result.status = 'active';
+                    result.label = 'Entry';
+                } else {
+                    result.status = 'pending';
+                    result.label = `+${Math.abs(result.distancePercent).toFixed(2)}%`;
+                }
+            }
+
+            return result;
+        }
+
         function createSetupCard(setup) {
             const scoreClass = setup.composite_score >= 75 ? 'high' :
                               setup.composite_score >= 60 ? 'moderate' : 'low';
@@ -2371,6 +2499,10 @@
             const market = getSymbolMarket(setup.symbol);
             const isOpen = isMarketOpen(setup.symbol);
             const marketClosedClass = isOpen ? '' : 'market-closed';
+
+            // Entry-Status prüfen
+            const entryStatus = getEntryStatus(setup);
+            const entryMissedClass = entryStatus.status === 'missed' ? 'entry-missed' : '';
 
             const signals = [
                 { name: 'N', available: setup.nhits_signal?.available, tooltip: 'NHITS: Preis-Prognose (25%)' },
@@ -2386,7 +2518,7 @@
             setupsCache[setup.symbol] = setup;
 
             return `
-                <div class="setup-card ${setup.direction} ${marketClosedClass}" onclick="selectSetup('${setup.symbol}', '${setup.timeframe}')" ondblclick="openAnalysis('${setup.symbol}', '${setup.timeframe}')">
+                <div class="setup-card ${setup.direction} ${marketClosedClass} ${entryMissedClass}" onclick="selectSetup('${setup.symbol}', '${setup.timeframe}')" ondblclick="openAnalysis('${setup.symbol}', '${setup.timeframe}')">
                     <div class="setup-top">
                         <span class="setup-symbol">
                             ${setup.symbol}
@@ -2402,6 +2534,7 @@
                     </div>
                     <div class="setup-meta">
                         <span class="setup-age" title="Alter seit Erkennung: ${setup.timestamp ? new Date(setup.timestamp).toLocaleString('de-CH') : ''}">${formatSetupAge(setup.timestamp)}</span>
+                        ${setup.entry_exit_levels ? `<span class="entry-status ${entryStatus.status}" title="Entry-Status: ${entryStatus.status === 'missed' ? 'Verpasst' : entryStatus.status === 'active' ? 'Aktiv' : 'Ausstehend'}">${entryStatus.label}</span>` : ''}
                         <span>${setup.timeframe} | ${setup.confidence_level}</span>
                         <button class="setup-detail-btn" onclick="event.stopPropagation(); openDetailModal('${setup.symbol}', '${setup.timeframe}')" title="Alle Details anzeigen">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2646,6 +2779,7 @@
             llmAnalysisLoaded = false;
 
             const modal = document.getElementById('detailModal');
+            // Title wird später mit Setup-ID aktualisiert
             document.getElementById('detailModalTitle').textContent = `${symbol} ${timeframe} - Setup Details`;
 
             // Loading state
@@ -2732,9 +2866,10 @@
                 return;
             }
 
-            // Update modal title with actual timeframe from setup data
+            // Update modal title with actual timeframe and Setup-ID from setup data
             const actualTimeframe = setup.timeframe || timeframe;
-            document.getElementById('detailModalTitle').textContent = `${symbol} ${actualTimeframe} - Setup Details`;
+            const setupIdSuffix = setup.setup_id ? ` (${setup.setup_id})` : '';
+            document.getElementById('detailModalTitle').textContent = `${symbol} ${actualTimeframe} - Setup Details${setupIdSuffix}`;
             currentDetailTimeframe = actualTimeframe;
 
             // Alle Inhalte in einem einzigen Container rendern
@@ -2772,12 +2907,6 @@
             return `
                 <div class="consolidated-section">
                     <h3 class="section-title"><span class="icon">📊</span> Übersicht</h3>
-                    ${setup.setup_id ? `
-                    <div class="setup-id-display">
-                        <span class="setup-id-label">Setup-ID:</span>
-                        <span class="setup-id-value">${setup.setup_id}</span>
-                    </div>
-                    ` : ''}
                     <div class="score-meter" style="margin-bottom: 0.5rem;">
                         <div class="score-bar">
                             <div class="score-bar-fill ${scoreClass}" style="width: ${setup.composite_score}%"></div>
@@ -2785,84 +2914,85 @@
                         <span class="score-value-large" style="color: ${scoreClass === 'high' ? '#34d399' : scoreClass === 'moderate' ? '#fbbf24' : '#9ca3af'}">${setup.composite_score.toFixed(1)}</span>
                     </div>
 
-                    <div class="detail-grid">
-                        <div class="detail-card">
-                            <div class="detail-card-title">Richtung</div>
-                            <div class="detail-card-value" style="color: ${directionColor}">
-                                ${directionIcon} ${setup.direction.toUpperCase()}
+                    <div class="overview-two-columns">
+                        <!-- Linke Spalte: Info + Key Drivers -->
+                        <div class="overview-left">
+                            <div class="detail-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                                <div class="detail-card">
+                                    <div class="detail-card-title">Richtung</div>
+                                    <div class="detail-card-value" style="color: ${directionColor}">
+                                        ${directionIcon} ${setup.direction.toUpperCase()}
+                                    </div>
+                                    <div class="detail-card-sub">${setup.signal_alignment}</div>
+                                </div>
+
+                                <div class="detail-card">
+                                    <div class="detail-card-title">Konfidenz</div>
+                                    <div class="detail-card-value">${setup.confidence_level.toUpperCase()}</div>
+                                    <div class="detail-card-sub">${setup.signals_available}/5 Signale</div>
+                                </div>
+
+                                <div class="detail-card">
+                                    <div class="detail-card-title">Timeframe</div>
+                                    <div class="detail-card-value">${setup.timeframe}</div>
+                                    <div class="detail-card-sub">${new Date(setup.timestamp).toLocaleTimeString('de-CH')}</div>
+                                </div>
                             </div>
-                            <div class="detail-card-sub">${setup.signal_alignment}</div>
+
+                            ${setup.key_drivers && setup.key_drivers.length > 0 ? `
+                            <div style="margin-top: 0.4rem;">
+                                <div class="detail-card-title" style="margin-bottom: 0.2rem;">Key Drivers</div>
+                                <div class="pattern-list">
+                                    ${setup.key_drivers.map(driver => `<span class="pattern-tag">${driver}</span>`).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
                         </div>
 
-                        <div class="detail-card">
-                            <div class="detail-card-title">Konfidenz</div>
-                            <div class="detail-card-value">${setup.confidence_level.toUpperCase()}</div>
-                            <div class="detail-card-sub">${setup.signals_available}/5 Signale</div>
-                        </div>
-
-                        <div class="detail-card">
-                            <div class="detail-card-title">Timeframe</div>
-                            <div class="detail-card-value">${setup.timeframe}</div>
-                            <div class="detail-card-sub">${new Date(setup.timestamp).toLocaleTimeString('de-CH')}</div>
-                        </div>
-
-                        ${setup.current_price ? `
-                        <div class="detail-card">
-                            <div class="detail-card-title">Preis</div>
-                            <div class="detail-card-value">${setup.current_price.toLocaleString('de-CH', {minimumFractionDigits: 2})}</div>
-                        </div>
-                        ` : ''}
-                    </div>
-
-                    ${setup.key_drivers && setup.key_drivers.length > 0 ? `
-                    <div style="margin-top: 0.4rem;">
-                        <div class="detail-card-title" style="margin-bottom: 0.2rem;">Key Drivers</div>
-                        <div class="pattern-list">
-                            ${setup.key_drivers.map(driver => `<span class="pattern-tag">${driver}</span>`).join('')}
+                        <!-- Rechte Spalte: Entry/Exit Levels -->
+                        <div class="overview-right">
+                            ${renderLevelsSection(setup)}
                         </div>
                     </div>
-                    ` : ''}
-
-                    ${renderLevelsSection(setup)}
                 </div>
             `;
         }
 
         function renderLevelsSection(setup) {
             if (!setup.entry_exit_levels) {
-                return '';
+                return '<div class="levels-placeholder"><span style="opacity: 0.5;">Keine Levels verfügbar</span></div>';
             }
 
             const levels = setup.entry_exit_levels;
             const currentPrice = setup.current_price;
 
             return `
-                <div style="margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <div class="detail-card-title" style="margin-bottom: 0.4rem;">
+                <div class="levels-container">
+                    <div class="detail-card-title" style="margin-bottom: 0.3rem;">
                         <span style="color: #a78bfa;">🎯</span> Entry/Exit Levels
-                        <span style="font-size: 0.6rem; opacity: 0.6; margin-left: 0.5rem;">(Klick zum Kopieren)</span>
+                        <span style="font-size: 0.55rem; opacity: 0.5; margin-left: 0.3rem;">(Klick kopiert)</span>
                     </div>
 
                     <!-- Zeile 1: Entry / Actual Price / R:R -->
-                    <div class="detail-grid" style="grid-template-columns: 1fr 1fr 0.6fr; margin-bottom: 0.3rem;">
+                    <div class="detail-grid levels-grid" style="grid-template-columns: 1fr 1fr 0.5fr; margin-bottom: 0.2rem;">
                         <div class="detail-card">
                             <div class="detail-card-title">Entry</div>
                             ${renderCopyablePrice(levels.entry_price, '#64c8ff')}
                         </div>
                         <div class="detail-card">
-                            <div class="detail-card-title">Aktueller Preis</div>
+                            <div class="detail-card-title">Aktuell</div>
                             ${renderCopyablePrice(currentPrice, '#fbbf24')}
                         </div>
                         <div class="detail-card">
                             <div class="detail-card-title">R:R</div>
-                            <div class="detail-card-value" style="color: #a78bfa;">
+                            <div class="detail-card-value" style="color: #a78bfa; font-size: 0.85rem;">
                                 ${levels.risk_reward_ratio ? levels.risk_reward_ratio.toFixed(1) + ':1' : '-'}
                             </div>
                         </div>
                     </div>
 
                     <!-- Zeile 2: Stop Loss -->
-                    <div class="detail-grid" style="grid-template-columns: 1fr; margin-bottom: 0.3rem;">
+                    <div class="detail-grid levels-grid" style="grid-template-columns: 1fr; margin-bottom: 0.2rem;">
                         <div class="detail-card">
                             <div class="detail-card-title">Stop Loss</div>
                             ${renderCopyablePrice(levels.stop_loss, '#f87171')}
@@ -2870,7 +3000,7 @@
                     </div>
 
                     <!-- Zeile 3: TP1 / TP2 / TP3 -->
-                    <div class="detail-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="detail-grid levels-grid" style="grid-template-columns: repeat(3, 1fr);">
                         <div class="detail-card">
                             <div class="detail-card-title">TP1</div>
                             ${renderCopyablePrice(levels.take_profit_1, '#34d399')}
